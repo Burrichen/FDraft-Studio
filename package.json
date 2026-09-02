@@ -1,0 +1,9 @@
+{
+  "name": "fdraft-studio-workspace",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "check:architecture": "node scripts/check-architecture.mjs"
+  }
+}
+
