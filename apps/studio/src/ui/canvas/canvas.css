@@ -1,0 +1,60 @@
+.studio-canvas-viewport {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  background: #d4d4d8;
+  touch-action: none;
+  outline: none;
+  user-select: none;
+}
+
+.studio-canvas-viewport textarea {
+  user-select: text;
+}
+
+.studio-canvas-zoom-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+.studio-canvas-stage {
+  position: relative;
+  background: #fff;
+  box-shadow: 0 0 0 1px #a1a1aa, 0 4px 24px rgba(0, 0, 0, 0.15);
+}
+
+.studio-canvas-marquee {
+  position: absolute;
+  border: 1px solid #f97316;
+  background: rgba(249, 115, 22, 0.1);
+  pointer-events: none;
+}
+
+.studio-canvas-toolbar {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #18181b;
+  border-radius: 6px;
+  padding: 4px;
+}
+
+.studio-canvas-toolbar button {
+  background: #27272a;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  min-width: 28px;
+}
+
+.studio-canvas-toolbar button:hover {
+  background: #3f3f46;
+}

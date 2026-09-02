@@ -11,12 +11,15 @@ Owns the Studio application and the source of the shared packages:
 ```text
 FDraft-Studio/
   apps/studio/
+  apps/renderer-lab/
   packages/theme-sdk/
   packages/theme-renderer/
   schemas/
   fixtures/
   docs/
 ```
+
+`apps/renderer-lab` is a small fixture-lab React app (Prompt 3) that develops and visually proves `packages/theme-renderer` independently of both `apps/studio` (which doesn't exist yet) and FDraft. It is not shipped anywhere and has no relationship to the Studio application beyond living in the same workspace.
 
 ### `FDraft`
 

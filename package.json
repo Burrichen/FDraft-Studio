@@ -3,7 +3,25 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
-    "check:architecture": "node scripts/check-architecture.mjs"
+    "check:architecture": "node scripts/check-architecture.mjs",
+    "check:boundaries": "node scripts/check-package-boundaries.mjs",
+    "check:schemas": "pnpm --filter @fdraft/theme-sdk check:schemas",
+    "generate:schemas": "pnpm --filter @fdraft/theme-sdk generate:schemas",
+    "lint": "eslint .",
+    "test:theme-sdk": "pnpm --filter @fdraft/theme-sdk test",
+    "typecheck:theme-sdk": "pnpm --filter @fdraft/theme-sdk typecheck",
+    "build:theme-sdk": "pnpm --filter @fdraft/theme-sdk build",
+    "lint:theme-sdk": "pnpm --filter @fdraft/theme-sdk lint",
+    "test:theme-renderer": "pnpm --filter @fdraft/theme-renderer test",
+    "typecheck:theme-renderer": "pnpm --filter @fdraft/theme-renderer typecheck",
+    "build:theme-renderer": "pnpm --filter @fdraft/theme-renderer build",
+    "lint:theme-renderer": "pnpm --filter @fdraft/theme-renderer lint"
+  },
+  "devDependencies": {
+    "eslint": "^10.9.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.12.0",
+    "typescript-eslint": "^8.69.0"
   }
 }
 

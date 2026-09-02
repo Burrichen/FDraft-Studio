@@ -1,0 +1,73 @@
+name: Release @fdraft/theme-renderer
+
+# Tag-triggered release of an immutable, checksummed package tarball —
+# same route as @fdraft/theme-sdk (see release-theme-sdk.yml and
+# docs/architecture/COMPATIBILITY_AND_RELEASES.md) and for the same
+# reason: both repos are public, no package registry exists, and this
+# needs no credentials beyond the workflow's default GITHUB_TOKEN.
+#
+# To cut a release: bump packages/theme-renderer/package.json's version,
+# commit, then create and push a tag "theme-renderer-v<version>". This
+# workflow does the rest — cutting the tag itself stays a deliberate human
+# action, not something run automatically.
+on:
+  push:
+    tags:
+      - "theme-renderer-v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Verify tag matches package.json version
+        shell: bash
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#theme-renderer-v}"
+          PKG_VERSION=$(node -p "require('./packages/theme-renderer/package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match packages/theme-renderer/package.json version $PKG_VERSION"
+            exit 1
+          fi
+
+      - run: pnpm run check:architecture
+      - run: pnpm run check:boundaries
+      - run: pnpm --filter @fdraft/theme-sdk build
+      - run: pnpm --filter @fdraft/theme-renderer typecheck
+      - run: pnpm --filter @fdraft/theme-renderer test
+      - run: pnpm --filter @fdraft/theme-renderer build
+
+      - name: Pack tarball
+        working-directory: packages/theme-renderer
+        # pnpm pack rewrites the workspace:* dependency on @fdraft/theme-sdk
+        # to its exact resolved version — see release-theme-sdk.yml.
+        run: pnpm pack
+
+      - name: Checksum
+        working-directory: packages/theme-renderer
+        run: |
+          for f in fdraft-theme-renderer-*.tgz; do
+            sha256sum "$f" > "$f.sha256"
+          done
+
+      - name: Publish GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            packages/theme-renderer/fdraft-theme-renderer-*.tgz \
+            packages/theme-renderer/fdraft-theme-renderer-*.tgz.sha256 \
+            --title "@fdraft/theme-renderer $GITHUB_REF_NAME" \
+            --notes "Immutable, checksummed tarball release of @fdraft/theme-renderer, built against the exact @fdraft/theme-sdk version recorded in its package.json. See docs/architecture/COMPATIBILITY_AND_RELEASES.md."

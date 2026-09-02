@@ -1,0 +1,45 @@
+{
+  "formatVersion": "1.0.0",
+  "metadata": {
+    "id": "48ad586e-d96b-421e-92f6-50cab0a78b7b",
+    "name": "Broken Reference Fixture"
+  },
+  "tokens": {
+    "colors": [],
+    "gradients": [],
+    "shadows": [],
+    "borders": [],
+    "spacing": [],
+    "radii": [],
+    "fonts": [],
+    "breakpoints": []
+  },
+  "assets": [],
+  "imageStateGroups": [],
+  "componentRequirements": [],
+  "masters": [],
+  "pages": [
+    {
+      "id": "539c2c10-8bee-4b92-9dff-83d5736ba6de",
+      "name": "Page with a dangling asset reference",
+      "slug": "broken",
+      "layers": [
+        {
+          "id": "42453a11-15ba-4a8a-b675-dd2b55eaa1a3",
+          "type": "image",
+          "name": "Missing image",
+          "assetId": "9f1538da-8c4b-4d54-8838-d57b3d3276ef",
+          "transform": { "x": 0, "y": 0, "width": 100, "height": 100, "rotationDeg": 0, "scaleX": 1, "scaleY": 1 },
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "zIndex": 0,
+          "responsive": [],
+          "interactionStates": []
+        }
+      ],
+      "animations": []
+    }
+  ],
+  "popups": []
+}

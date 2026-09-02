@@ -1,0 +1,381 @@
+{
+  "assetFolders": [],
+  "assets": [
+    {
+      "id": "4cab67b2-d112-456a-88bd-c067dc03e6d1",
+      "kind": "image",
+      "mimeType": "image/png",
+      "path": "assets/4cab67b2-poster.png",
+      "sha256": "58b6c2a20cf947fe8fc0a9ba12fc03b547b1f0c8986365e5d604bda4d8808430",
+      "sizeBytes": 13
+    },
+    {
+      "id": "3bab1091-999c-4d60-b699-0f59bf9c8842",
+      "kind": "image",
+      "mimeType": "image/png",
+      "path": "assets/3bab1091-bg-default.png",
+      "sha256": "83d0c0ee45d6b633e8698d622b4f1768caa8f2eb16c8762767d2ad840d722219",
+      "sizeBytes": 11
+    },
+    {
+      "id": "ed40a09f-14b1-42dc-b02a-36a2f9c9214f",
+      "kind": "image",
+      "mimeType": "image/png",
+      "path": "assets/ed40a09f-bg-hover.png",
+      "sha256": "1149b84e0e13c0f4b2381142d0e935a5c14539e4e8788c1773c36e4f42359517",
+      "sizeBytes": 11
+    },
+    {
+      "id": "1e5c58c1-10dd-4ace-9f06-af036d6958ba",
+      "kind": "font",
+      "mimeType": "font/woff2",
+      "path": "assets/af2f9c00-heading.woff2",
+      "sha256": "9bef69edda299685209c9dd4c81d6c150eb443c49c59a36d4d63d57956722663",
+      "sizeBytes": 9
+    }
+  ],
+  "behaviourRules": [
+    {
+      "actions": [
+        {
+          "stateGroupId": "4306306e-b300-4267-b96b-6d0c3a11524c",
+          "stateId": "02a0ce84-883a-4c38-a81e-e590fc7e4dde",
+          "type": "setImageState"
+        }
+      ],
+      "condition": {
+        "equals": true,
+        "type": "boolean",
+        "variable": {
+          "kind": "interactionFlag",
+          "layerId": "30fd6566-8f77-4fda-841a-22ab203b147f",
+          "which": "hover"
+        }
+      },
+      "enabled": true,
+      "id": "9b6c8f2a-2e77-4b3a-9c0e-9a6a9f6a8a1a",
+      "name": "Swap poster background on hover",
+      "priority": 0,
+      "trigger": {
+        "type": "whileTrue"
+      }
+    }
+  ],
+  "canvas": {
+    "height": 1080,
+    "width": 1920
+  },
+  "componentRequirements": [
+    {
+      "allowedProperties": [
+        "color",
+        "backgroundColor",
+        "borderRadius"
+      ],
+      "componentKey": "opt-in-button",
+      "id": "f36b2845-a0ed-4bfa-a31f-e039e9d6a9e3",
+      "required": true
+    }
+  ],
+  "formatVersion": "1.0.0",
+  "imageStateGroups": [
+    {
+      "defaultStateId": "c5112fbf-c589-4282-9318-35239104e5cc",
+      "id": "4306306e-b300-4267-b96b-6d0c3a11524c",
+      "name": "Poster background state",
+      "states": [
+        {
+          "assetId": "3bab1091-999c-4d60-b699-0f59bf9c8842",
+          "id": "c5112fbf-c589-4282-9318-35239104e5cc",
+          "name": "Default"
+        },
+        {
+          "assetId": "ed40a09f-14b1-42dc-b02a-36a2f9c9214f",
+          "id": "02a0ce84-883a-4c38-a81e-e590fc7e4dde",
+          "name": "Hover"
+        }
+      ]
+    }
+  ],
+  "masters": [
+    {
+      "animations": [],
+      "id": "056d7aaf-acf4-4ced-9643-9c9ee0f742b5",
+      "layers": [
+        {
+          "children": [
+            {
+              "assetId": "4cab67b2-d112-456a-88bd-c067dc03e6d1",
+              "id": "6c17b000-ee24-4c85-b5d2-29c103bc8722",
+              "interactionStates": [],
+              "locked": false,
+              "name": "Background Image",
+              "opacity": 1,
+              "responsive": [],
+              "transform": {
+                "height": 1080,
+                "rotationDeg": 0,
+                "scaleX": 1,
+                "scaleY": 1,
+                "width": 1920,
+                "x": 0,
+                "y": 0
+              },
+              "type": "image",
+              "visible": true,
+              "zIndex": 0
+            },
+            {
+              "fillColorTokenId": "30fa0fcb-8d21-4f6f-8e1d-cf202ac33a40",
+              "id": "3dd75523-572a-483f-85a2-e9c2b6ea7c97",
+              "interactionStates": [],
+              "locked": false,
+              "name": "Footer Bar",
+              "opacity": 1,
+              "responsive": [],
+              "shape": "rect",
+              "transform": {
+                "height": 80,
+                "rotationDeg": 0,
+                "scaleX": 1,
+                "scaleY": 1,
+                "width": 1920,
+                "x": 0,
+                "y": 1000
+              },
+              "type": "shape",
+              "visible": true,
+              "zIndex": 1
+            }
+          ],
+          "id": "78103b55-1184-47d4-b42a-4d8abd8eaa99",
+          "interactionStates": [],
+          "locked": false,
+          "name": "Background Group",
+          "opacity": 1,
+          "responsive": [],
+          "transform": {
+            "height": 1080,
+            "rotationDeg": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "width": 1920,
+            "x": 0,
+            "y": 0
+          },
+          "type": "group",
+          "visible": true,
+          "zIndex": 0
+        }
+      ],
+      "name": "Event Master"
+    }
+  ],
+  "metadata": {
+    "description": "Hand-authored fixture covering every Prompt 2 data-model area.",
+    "id": "783813dd-b176-43ac-ba8a-0d821a32cae6",
+    "name": "Sample Event Theme"
+  },
+  "pages": [
+    {
+      "animations": [
+        {
+          "delayMs": 0,
+          "direction": "normal",
+          "durationMs": 800,
+          "easing": "easeOut",
+          "from": 0,
+          "id": "b3938424-63ad-40ef-bf9f-b4aacb70bde7",
+          "intensity": 1,
+          "loop": false,
+          "name": "Poster fade-in",
+          "property": "opacity",
+          "targetLayerId": "30fd6566-8f77-4fda-841a-22ab203b147f",
+          "to": 1,
+          "trigger": "onEnter"
+        }
+      ],
+      "id": "19dee7b0-a59e-44f4-b32a-07d07949cc50",
+      "layers": [
+        {
+          "assetId": "3bab1091-999c-4d60-b699-0f59bf9c8842",
+          "id": "30fd6566-8f77-4fda-841a-22ab203b147f",
+          "interactionStates": [
+            {
+              "condition": {
+                "stateGroupId": "4306306e-b300-4267-b96b-6d0c3a11524c",
+                "stateId": "02a0ce84-883a-4c38-a81e-e590fc7e4dde",
+                "type": "stateEquals"
+              },
+              "id": "c8068822-2e89-4a48-af39-83bb1a10448d",
+              "name": "Hovered",
+              "opacity": 0.9
+            }
+          ],
+          "locked": false,
+          "name": "Poster",
+          "opacity": 1,
+          "responsive": [
+            {
+              "anchors": [
+                {
+                  "edge": "left",
+                  "offset": 16,
+                  "unit": "px"
+                }
+              ],
+              "breakpointId": "6e31516b-c66d-4489-b8bc-e179496939fc",
+              "transformOverride": {
+                "height": 300,
+                "width": 200
+              }
+            }
+          ],
+          "stateGroupId": "4306306e-b300-4267-b96b-6d0c3a11524c",
+          "transform": {
+            "height": 600,
+            "rotationDeg": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "width": 400,
+            "x": 100,
+            "y": 100
+          },
+          "type": "image",
+          "visible": true,
+          "zIndex": 1
+        },
+        {
+          "align": "center",
+          "colorTokenId": "30fa0fcb-8d21-4f6f-8e1d-cf202ac33a40",
+          "fontSizePx": 48,
+          "fontTokenId": "af2f9c00-3840-450f-9897-968ab7044c03",
+          "id": "83f1c084-a192-4c1b-8650-daa3d4ce79d8",
+          "interactionStates": [],
+          "locked": false,
+          "name": "Welcome heading",
+          "opacity": 1,
+          "responsive": [],
+          "text": "Welcome to the event!",
+          "transform": {
+            "height": 100,
+            "rotationDeg": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "width": 1920,
+            "x": 0,
+            "y": 40
+          },
+          "type": "text",
+          "visible": true,
+          "zIndex": 2
+        },
+        {
+          "componentKey": "opt-in-button",
+          "componentRequirementId": "f36b2845-a0ed-4bfa-a31f-e039e9d6a9e3",
+          "id": "90df1bc5-c78e-442a-821d-bea1d74e215b",
+          "interactionStates": [],
+          "locked": false,
+          "name": "Opt-in button",
+          "opacity": 1,
+          "responsive": [],
+          "styleOverrides": [
+            {
+              "componentRequirementId": "f36b2845-a0ed-4bfa-a31f-e039e9d6a9e3",
+              "id": "a1c3ea38-8d07-4f26-8381-3b22b9570d35",
+              "style": {
+                "backgroundColor": "#FF6600",
+                "borderRadius": 8
+              }
+            }
+          ],
+          "transform": {
+            "height": 56,
+            "rotationDeg": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "width": 200,
+            "x": 860,
+            "y": 900
+          },
+          "type": "component",
+          "visible": true,
+          "zIndex": 3
+        }
+      ],
+      "masterId": "056d7aaf-acf4-4ced-9643-9c9ee0f742b5",
+      "name": "Home",
+      "slug": "home"
+    }
+  ],
+  "popups": [
+    {
+      "animations": [],
+      "id": "62c7fa25-e8f4-48bb-80f6-3c5615073a79",
+      "layers": [
+        {
+          "align": "center",
+          "fontSizePx": 24,
+          "id": "e847d0ac-a840-4dae-8d49-9a4991be1e43",
+          "interactionStates": [],
+          "locked": false,
+          "name": "Popup message",
+          "opacity": 1,
+          "responsive": [],
+          "text": "Don't miss this year's event!",
+          "transform": {
+            "height": 200,
+            "rotationDeg": 0,
+            "scaleX": 1,
+            "scaleY": 1,
+            "width": 600,
+            "x": 0,
+            "y": 0
+          },
+          "type": "text",
+          "visible": true,
+          "zIndex": 0
+        }
+      ],
+      "masterId": "056d7aaf-acf4-4ced-9643-9c9ee0f742b5",
+      "name": "Welcome popup",
+      "trigger": "onLoad"
+    }
+  ],
+  "tokens": {
+    "borders": [],
+    "breakpoints": [
+      {
+        "id": "6e31516b-c66d-4489-b8bc-e179496939fc",
+        "minWidthPx": 0,
+        "name": "Mobile"
+      },
+      {
+        "id": "c5998596-7a03-441c-9701-7f88f73e9c19",
+        "minWidthPx": 1024,
+        "name": "Desktop"
+      }
+    ],
+    "colors": [
+      {
+        "id": "30fa0fcb-8d21-4f6f-8e1d-cf202ac33a40",
+        "name": "Primary",
+        "value": "#FF6600"
+      }
+    ],
+    "fonts": [
+      {
+        "assetId": "1e5c58c1-10dd-4ace-9f06-af036d6958ba",
+        "fallbackFamily": "sans-serif",
+        "id": "af2f9c00-3840-450f-9897-968ab7044c03",
+        "italic": false,
+        "name": "Heading Font",
+        "weight": 700
+      }
+    ],
+    "gradients": [],
+    "radii": [],
+    "shadows": [],
+    "spacing": []
+  }
+}

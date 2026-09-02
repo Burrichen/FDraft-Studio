@@ -1,0 +1,625 @@
+/*
+ * Without this, `width: 100%` on an <input>/<textarea> sets only its
+ * content box to 100% of its parent — padding and border then add on
+ * top, overflowing fixed-width panels like the 240px side panels below.
+ * That's what was clipping the Properties panel's W/H/Opacity fields at
+ * narrower window sizes before this reset was added.
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  font-family: system-ui, sans-serif;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #18181b;
+  color: #fff;
+  gap: 12px;
+}
+
+.top-bar-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.top-bar-title {
+  font-weight: 600;
+}
+
+.top-bar-modes {
+  display: flex;
+  gap: 4px;
+}
+
+.top-bar button {
+  background: #27272a;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.top-bar button[aria-pressed="true"] {
+  background: #f97316;
+}
+
+.top-bar button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.shell-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.left-panel,
+.right-panel {
+  width: 240px;
+  flex-shrink: 0;
+  background: #f4f4f5;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.left-panel h2,
+.right-panel h2 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #71717a;
+  margin: 12px 0 6px;
+}
+
+.left-panel ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.left-panel li button {
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.left-panel li button[aria-pressed="true"] {
+  background: #e4e4e7;
+  font-weight: 600;
+}
+
+.left-panel-empty,
+.left-panel-placeholder,
+.right-panel-placeholder {
+  color: #a1a1aa;
+  font-size: 0.8rem;
+}
+
+.left-panel-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.left-panel-section-header h2 {
+  margin: 12px 0 6px;
+}
+
+.left-panel-add {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  background: #e4e4e7;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.left-panel-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.left-panel-row input[type="text"] {
+  width: 100%;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.left-panel-select {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+
+.left-panel-icon {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: #71717a;
+}
+
+.left-panel-row-action {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.7rem;
+  opacity: 0.5;
+}
+
+.left-panel-row-action:hover {
+  opacity: 1;
+  background: #e4e4e7;
+}
+
+/* Master inheritance panel */
+.master-panel {
+  border-bottom: 1px solid #e4e4e7;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+
+.master-panel select {
+  width: 100%;
+  padding: 6px;
+}
+
+.master-panel-hint {
+  font-size: 0.7rem;
+  color: #71717a;
+  margin: 8px 0 4px;
+}
+
+.master-layer-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+
+.master-layer-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 0.75rem;
+}
+
+.master-layer-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.master-layer-overridden-badge {
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.65rem;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.master-layer-visible {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+/* Validation panel (shares .modal-overlay/.modal/.modal-header from the Asset Workspace's export dialog) */
+.validation-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.validation-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f4f4f5;
+  font-size: 0.8rem;
+}
+
+.validation-severity {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.validation-severity-error {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.validation-severity-warning {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.validation-message {
+  flex: 1;
+}
+
+.validation-empty {
+  color: #71717a;
+  font-size: 0.8rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  margin-bottom: 12px;
+}
+
+.field-hint {
+  font-size: 0.7rem;
+  color: #a1a1aa;
+}
+
+.field-hint-warn {
+  color: #c2410c;
+}
+
+.field input,
+.field textarea {
+  padding: 6px;
+  font: inherit;
+}
+
+.shell-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #e4e4e7;
+}
+
+.shell-mode-label {
+  padding: 4px 12px;
+  font-size: 0.7rem;
+  color: #52525b;
+  background: #d4d4d8;
+}
+
+.shell-stage-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: auto;
+  padding: 24px;
+}
+
+.shell-stage-scaler {
+  width: 960px;
+  transform-origin: top center;
+  background: #fff;
+  box-shadow: 0 0 0 1px #ccc;
+}
+
+.shell-empty {
+  margin: auto;
+  color: #71717a;
+}
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 12px;
+  background: #18181b;
+  color: #d4d4d8;
+  font-size: 0.75rem;
+}
+
+.status-host-settings {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-host-settings label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-host-settings select {
+  font-size: 0.75rem;
+}
+
+.status-zoom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-zoom button {
+  background: #27272a;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+}
+
+/* Preview mode: no editor chrome at all. */
+.shell-preview {
+  background: #000;
+}
+
+.preview-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #18181b;
+  color: #fff;
+  font-size: 0.8rem;
+}
+
+.preview-bar button {
+  background: #f97316;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.shell-center-preview {
+  padding: 24px;
+  align-items: center;
+  justify-content: center;
+}
+
+.shell-center-preview > * {
+  width: 960px;
+}
+
+/* Distraction-free canvas mode: same editable Canvas as Design mode, all chrome hidden. */
+.shell-focus {
+  position: relative;
+}
+
+.shell-center-focus {
+  padding: 0;
+}
+
+.focus-exit {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #18181b;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.focus-exit:hover {
+  opacity: 1;
+}
+
+.shell-center-focus .studio-canvas-viewport {
+  height: 100%;
+}
+
+/* Layers tree */
+.layers-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.layers-panel-toolbar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.layers-panel-toolbar .layers-search {
+  flex: 1;
+}
+
+.layers-search {
+  padding: 6px;
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.layers-tree,
+.layers-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.layers-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 4px;
+}
+
+.layers-row-selected {
+  background: #e4e4e7;
+}
+
+.layers-row-dragover {
+  outline: 1px dashed #f97316;
+}
+
+.layers-select {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  text-align: left;
+  padding: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.layers-icon {
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+  font-size: 0.7rem;
+  color: #71717a;
+}
+
+.layers-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layers-toggle {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.layers-toggle:hover {
+  opacity: 1;
+}
+
+/* Properties panel */
+.properties-panel h3 {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: #71717a;
+  margin: 12px 0 6px;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.field-number input {
+  width: 100%;
+}
+
+.field-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.button-row button {
+  background: #e4e4e7;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.button-row button:hover {
+  background: #d4d4d8;
+}
+
+.button-row button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.animation-fields {
+  border: 1px solid #e2e2e5;
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.performance-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+  margin: 8px 0;
+}
+
+.performance-summary div {
+  display: flex;
+  flex-direction: column;
+}
+
+.performance-summary dt {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: #888;
+}
+
+.performance-summary dd {
+  margin: 0;
+  font-weight: 600;
+}

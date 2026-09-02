@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm run check:architecture
+      - run: pnpm run check:boundaries
+      - run: pnpm run lint
+
+      # theme-sdk first — theme-renderer and renderer-lab both consume its
+      # build output via the pnpm workspace link, not its source.
+      - run: pnpm --filter @fdraft/theme-sdk typecheck
+      - run: pnpm --filter @fdraft/theme-sdk test
+      - run: pnpm --filter @fdraft/theme-sdk build
+      - run: pnpm run check:schemas
+
+      - run: pnpm --filter @fdraft/theme-renderer typecheck
+      - run: pnpm --filter @fdraft/theme-renderer test
+      - run: pnpm --filter @fdraft/theme-renderer build
+
+      - run: pnpm --filter @fdraft/renderer-lab typecheck
+      - run: pnpm --filter @fdraft/renderer-lab build
+
+      - run: pnpm --filter @fdraft/studio typecheck
+      - run: pnpm --filter @fdraft/studio test
+      - run: pnpm --filter @fdraft/studio build
+
+      # Linux system libraries Tauri v2 needs even just to `cargo check`/lint its Rust backend.
+      - name: Install Tauri Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf build-essential libssl-dev libgtk-3-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/studio/src-tauri
+
+      - run: cargo check --manifest-path apps/studio/src-tauri/Cargo.toml
+      - run: cargo fmt --manifest-path apps/studio/src-tauri/Cargo.toml --check
+      - run: cargo clippy --manifest-path apps/studio/src-tauri/Cargo.toml --all-targets -- -D warnings
+
+  # A full `tauri build` (real installers per OS: .dmg/.app, .msi/.exe, .deb/.AppImage)
+  # needs a per-OS matrix and is a heavier, separate concern from the fast
+  # PR-gating job above — reserved for a dedicated release workflow once
+  # Studio has something worth releasing (tracked in docs/IMPLEMENTATION_STATUS.md).

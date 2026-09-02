@@ -1,0 +1,24 @@
+[package]
+name = "fdraft-studio"
+version = "0.1.0"
+description = "FDraft Studio — standalone desktop theme/event-page designer for FDraft"
+authors = ["FDraft Studio"]
+license = "UNLICENSED"
+repository = "https://github.com/Burrichen/FDraft-Studio"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "fdraft_studio_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+tauri = { version = "2", features = [] }
+tauri-plugin-fs = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-store = "2"

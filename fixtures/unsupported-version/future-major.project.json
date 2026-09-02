@@ -1,0 +1,23 @@
+{
+  "formatVersion": "2.0.0",
+  "metadata": {
+    "id": "9b6a5c1e-2f7a-4b8a-9d3d-6b7c9c9f2a11",
+    "name": "Future Format Fixture"
+  },
+  "tokens": {
+    "colors": [],
+    "gradients": [],
+    "shadows": [],
+    "borders": [],
+    "spacing": [],
+    "radii": [],
+    "fonts": [],
+    "breakpoints": []
+  },
+  "assets": [],
+  "imageStateGroups": [],
+  "componentRequirements": [],
+  "masters": [],
+  "pages": [],
+  "popups": []
+}

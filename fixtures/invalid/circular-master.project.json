@@ -1,0 +1,26 @@
+{
+  "formatVersion": "1.0.0",
+  "metadata": {
+    "id": "5d55f952-9024-4960-99c3-e80ba3224049",
+    "name": "Circular Master Fixture"
+  },
+  "tokens": {
+    "colors": [],
+    "gradients": [],
+    "shadows": [],
+    "borders": [],
+    "spacing": [],
+    "radii": [],
+    "fonts": [],
+    "breakpoints": []
+  },
+  "assets": [],
+  "imageStateGroups": [],
+  "componentRequirements": [],
+  "masters": [
+    { "id": "1265cc2e-9059-4617-a4a6-22a2b4f85927", "name": "Master A", "parentMasterId": "fe15fde1-56ac-44ab-900e-a94953592534", "layers": [], "animations": [] },
+    { "id": "fe15fde1-56ac-44ab-900e-a94953592534", "name": "Master B", "parentMasterId": "1265cc2e-9059-4617-a4a6-22a2b4f85927", "layers": [], "animations": [] }
+  ],
+  "pages": [],
+  "popups": []
+}

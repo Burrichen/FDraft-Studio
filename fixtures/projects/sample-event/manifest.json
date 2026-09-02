@@ -1,0 +1,32 @@
+{
+  "files": [
+    {
+      "path": "assets/3bab1091-bg-default.png",
+      "sha256": "83d0c0ee45d6b633e8698d622b4f1768caa8f2eb16c8762767d2ad840d722219",
+      "sizeBytes": 11
+    },
+    {
+      "path": "assets/4cab67b2-poster.png",
+      "sha256": "58b6c2a20cf947fe8fc0a9ba12fc03b547b1f0c8986365e5d604bda4d8808430",
+      "sizeBytes": 13
+    },
+    {
+      "path": "assets/af2f9c00-heading.woff2",
+      "sha256": "9bef69edda299685209c9dd4c81d6c150eb443c49c59a36d4d63d57956722663",
+      "sizeBytes": 9
+    },
+    {
+      "path": "assets/ed40a09f-bg-hover.png",
+      "sha256": "1149b84e0e13c0f4b2381142d0e935a5c14539e4e8788c1773c36e4f42359517",
+      "sizeBytes": 11
+    },
+    {
+      "path": "project.json",
+      "sha256": "ffc4c28658e2d1acc78c517f069fe3d190f652aec340bece9a7954ead5150d6c",
+      "sizeBytes": 10476
+    }
+  ],
+  "packageFormat": "fdstudio",
+  "projectFormatVersion": "1.0.0",
+  "sdkVersion": "0.1.0"
+}

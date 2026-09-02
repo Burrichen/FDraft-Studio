@@ -1,0 +1,26 @@
+{
+  "formatVersion": "1.0.0",
+  "metadata": {
+    "id": "e4f5a44e-9c8a-4284-aaf5-215e3432b167",
+    "name": "Duplicate ID Fixture"
+  },
+  "tokens": {
+    "colors": [
+      { "id": "79170300-3199-48ab-bf30-f239b14e8428", "name": "Primary", "value": "#FF0000" },
+      { "id": "79170300-3199-48ab-bf30-f239b14e8428", "name": "Also Primary (duplicate id)", "value": "#00FF00" }
+    ],
+    "gradients": [],
+    "shadows": [],
+    "borders": [],
+    "spacing": [],
+    "radii": [],
+    "fonts": [],
+    "breakpoints": []
+  },
+  "assets": [],
+  "imageStateGroups": [],
+  "componentRequirements": [],
+  "masters": [],
+  "pages": [],
+  "popups": []
+}

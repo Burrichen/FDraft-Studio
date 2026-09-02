@@ -22,6 +22,15 @@ The existing FDraft application remains in its own repository. It consumes exact
 
 Run `pnpm check:architecture` once pnpm is available. Prompt 1 in the supplied Claude Code prompt pack verifies this scaffold before application development begins.
 
+## Working packages
+
+- `packages/theme-sdk` — the versioned theme contract, validation, packaging, and CLI (Prompt 2). See its own README.
+- `packages/theme-renderer` — the shared DOM renderer both Studio and FDraft will render through (Prompt 3). See its own README.
+- `apps/renderer-lab` — a fixture lab that develops and visually proves the renderer independently of Studio and FDraft. Run `pnpm --filter @fdraft/renderer-lab dev`.
+- `apps/studio` — the standalone Tauri + React desktop application (Prompt 4): project lifecycle, atomic saves, autosave/crash-recovery, snapshots, undo/redo. Run `pnpm --filter @fdraft/studio tauri:dev`. See its own README.
+
+Useful root-level commands: `pnpm run lint`, `pnpm run check:boundaries` (no package imports across a repository/app boundary it shouldn't), `pnpm run check:schemas` (generated JSON Schema matches source), plus each package's own `typecheck`/`test`/`build`.
+
 ## Repository boundary
 
 Keep the repositories beside one another during development:

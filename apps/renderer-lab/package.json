@@ -1,0 +1,29 @@
+{
+  "name": "@fdraft/renderer-lab",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Fixture lab: develops and visually proves @fdraft/theme-renderer independently of the FDraft application and before any Studio UI exists.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@fdraft/theme-renderer": "workspace:*",
+    "@fdraft/theme-sdk": "workspace:*",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@vitejs/plugin-react": "^6.1.1",
+    "typescript": "^5.9.3",
+    "vite": "^8.2.2"
+  },
+  "packageManager": "pnpm@11.21.0"
+}

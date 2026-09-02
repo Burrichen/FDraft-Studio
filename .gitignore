@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+out/
+.next/
+target/
+
+# Tauri
+src-tauri/target/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+
+# Test / coverage
+coverage/
+test-results/
+playwright-report/
+
+# Local development overrides (e.g. sibling file: links) — never commit these
+.local/

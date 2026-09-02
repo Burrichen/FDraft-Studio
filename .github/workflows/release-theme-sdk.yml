@@ -1,0 +1,72 @@
+name: Release @fdraft/theme-sdk
+
+# Tag-triggered release of an immutable, checksummed package tarball —
+# see docs/architecture/COMPATIBILITY_AND_RELEASES.md for why this route
+# (rather than a package registry) was chosen and how FDraft consumes it.
+#
+# To cut a release: bump packages/theme-sdk/package.json's version, commit,
+# then create and push a tag "theme-sdk-v<version>" (e.g. "theme-sdk-v0.1.0").
+# This workflow does the rest. Nothing about cutting that tag is automated
+# here on purpose — it's a deliberate human action.
+on:
+  push:
+    tags:
+      - "theme-sdk-v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Verify tag matches package.json version
+        shell: bash
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#theme-sdk-v}"
+          PKG_VERSION=$(node -p "require('./packages/theme-sdk/package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match packages/theme-sdk/package.json version $PKG_VERSION"
+            exit 1
+          fi
+
+      - run: pnpm run check:architecture
+      - run: pnpm --filter @fdraft/theme-sdk typecheck
+      - run: pnpm --filter @fdraft/theme-sdk test
+      - run: pnpm --filter @fdraft/theme-sdk build
+      - run: pnpm run check:schemas
+
+      - name: Pack tarball
+        working-directory: packages/theme-sdk
+        # pnpm pack (not npm pack): rewrites any `workspace:*` dependency
+        # specifiers to their exact resolved version before packing, so a
+        # published tarball never asks an external consumer to resolve a
+        # pnpm-workspace-only protocol it can't understand.
+        run: pnpm pack
+
+      - name: Checksum
+        working-directory: packages/theme-sdk
+        run: |
+          for f in fdraft-theme-sdk-*.tgz; do
+            sha256sum "$f" > "$f.sha256"
+          done
+
+      - name: Publish GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            packages/theme-sdk/fdraft-theme-sdk-*.tgz \
+            packages/theme-sdk/fdraft-theme-sdk-*.tgz.sha256 \
+            --title "@fdraft/theme-sdk $GITHUB_REF_NAME" \
+            --notes "Immutable, checksummed tarball release of @fdraft/theme-sdk. See docs/architecture/COMPATIBILITY_AND_RELEASES.md for how FDraft should pin and verify this artifact."

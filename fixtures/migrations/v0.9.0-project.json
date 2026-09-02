@@ -1,0 +1,85 @@
+{
+  "formatVersion": "0.9.0",
+  "metadata": {
+    "id": "03b18b9c-2c31-4d6a-92ac-2332970c4ec6",
+    "name": "Legacy Format Fixture"
+  },
+  "tokens": {
+    "colors": [],
+    "gradients": [],
+    "shadows": [],
+    "borders": [],
+    "spacing": [],
+    "radii": [],
+    "fonts": []
+  },
+  "assets": [
+    {
+      "id": "0abe51db-4f75-4fa3-a34c-ed189ca8819f",
+      "kind": "image",
+      "path": "assets/legacy.png",
+      "mimeType": "image/png",
+      "sizeBytes": 4,
+      "sha256": "9f64a747e1b97f131fabb6b447296c9b6f0201e79fb3c5356e6c77e89b6a806a"
+    }
+  ],
+  "stateGroups": [
+    {
+      "id": "22e6bdee-eed1-405c-a3bb-e62b713f6a5b",
+      "name": "Legacy state group",
+      "defaultStateId": "daf8b92f-53be-4c15-b6fc-3c88a045c54c",
+      "states": [
+        { "id": "daf8b92f-53be-4c15-b6fc-3c88a045c54c", "name": "Default", "assetId": "0abe51db-4f75-4fa3-a34c-ed189ca8819f" }
+      ]
+    }
+  ],
+  "masters": [
+    {
+      "id": "a8d38b2c-3c46-4976-8592-b1bb6b40d386",
+      "name": "Legacy master",
+      "layers": [
+        {
+          "id": "724cbf7b-d675-47dc-823a-fd87f3223f1b",
+          "type": "image",
+          "name": "Background",
+          "assetId": "0abe51db-4f75-4fa3-a34c-ed189ca8819f",
+          "transform": { "x": 0, "y": 0, "width": 100, "height": 100, "rotationDeg": 0, "scaleX": 1, "scaleY": 1 },
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "zIndex": 0,
+          "responsive": [],
+          "interactionStates": []
+        }
+      ],
+      "animations": []
+    }
+  ],
+  "pages": [
+    {
+      "id": "68291fdd-82f6-4776-8e6c-83cbc66538de",
+      "name": "Legacy page",
+      "slug": "legacy-page",
+      "masterId": "a8d38b2c-3c46-4976-8592-b1bb6b40d386",
+      "layers": [
+        {
+          "id": "b8641cb4-beb2-4d30-b5c3-f205f9985899",
+          "type": "text",
+          "name": "Legacy heading",
+          "text": "This project predates componentRequirements and tokens.breakpoints.",
+          "fontSizePx": 32,
+          "align": "left",
+          "transform": { "x": 0, "y": 0, "width": 100, "height": 40, "rotationDeg": 0, "scaleX": 1, "scaleY": 1 },
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "zIndex": 0,
+          "responsive": [],
+          "interactionStates": []
+        }
+      ],
+      "animations": []
+    }
+  ],
+  "popups": []
+}

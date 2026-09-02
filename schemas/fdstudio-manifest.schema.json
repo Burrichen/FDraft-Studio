@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "packageFormat": {
+      "type": "string",
+      "const": "fdstudio"
+    },
+    "sdkVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "projectFormatVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "path",
+          "sha256",
+          "sizeBytes"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "packageFormat",
+    "sdkVersion",
+    "projectFormatVersion",
+    "files"
+  ],
+  "additionalProperties": false
+}
