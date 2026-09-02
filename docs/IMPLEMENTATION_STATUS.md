@@ -18,19 +18,80 @@ Update this file only with evidence. Keep commands, results, commit/tag referenc
 | 12. Cross-repository hardening and installers | Both | Not started | |
 | 13. Official event starter projects | Both | Not started | |
 
-## Current blockers
+## Release: `theme-runtime-v0.1.0`
 
-- **Action needed from the repository owner, more urgent now that Prompt 10 is next:** cut
-  the first releases of `@fdraft/theme-sdk` and `@fdraft/theme-renderer` by bumping each
-  package's version if needed, committing, and pushing a `theme-sdk-v<version>` /
-  `theme-renderer-v<version>` tag. Both packages are built and `pnpm pack`-verified as of
-  Prompt 9 (the packed `theme-renderer` tarball's `package.json` correctly pins
-  `"@fdraft/theme-sdk": "0.1.0"`, not `workspace:*`) — genuinely ready to release, version
-  numbers just weren't bumped unilaterally. `.github/workflows/release-theme-sdk.yml` /
-  `release-theme-renderer.yml` handle the rest (gate, pack, checksum, GitHub Release).
-  Prompt 10 (FDraft runtime integration) is the first phase that will actually need FDraft
-  to consume a real, exact-pinned version of both packages rather than the in-repo pnpm
-  workspace link, so this is worth doing before that phase starts.
+Cut by explicit repository-owner authorization ahead of Prompt 10 (the release boundary this
+project's own blocker list had been flagging since the end of Prompt 9). Evidence:
+
+- **Source commit:** `d1c876bc5b8ac784c801da450976386bc42d68a9` on `main` (the complete,
+  audited Prompts 1–9 working tree, committed as a single accurately-described commit —
+  314 files changed, 57761 insertions — since no prior commit in this repository's real
+  history captured that work). Pushed to `origin/main` before tagging.
+- **Tag:** annotated `theme-runtime-v0.1.0`, pointing at that exact commit; pushed to origin.
+  Cross-verified: `git rev-list -n 1 theme-runtime-v0.1.0`, the tag object's own `object.sha`
+  (via the GitHub API), `origin/main`'s HEAD, and the GitHub Release's `targetCommitish`
+  (`main`) all resolve to `d1c876b...` — no drift between tag, release, and pushed source.
+- **GitHub Release:** "FDraft Theme Runtime v0.1.0" at
+  `https://github.com/Burrichen/FDraft-Studio/releases/tag/theme-runtime-v0.1.0`, one
+  combined release for both packages as a tested compatibility pair (a deliberate,
+  user-approved deviation from the per-package `theme-sdk-v<version>` /
+  `theme-renderer-v<version>` tag scheme `docs/architecture/COMPATIBILITY_AND_RELEASES.md`
+  originally documented — see that file's "Current status" for why).
+- **Packages:** `@fdraft/theme-sdk@0.1.0` and `@fdraft/theme-renderer@0.1.0`, packed via
+  `pnpm pack` (which correctly rewrote `theme-renderer`'s `"@fdraft/theme-sdk": "workspace:*"`
+  to the exact resolved `"0.1.0"`). Assets attached to the Release: `fdraft-theme-sdk-0.1.0.tgz`,
+  `fdraft-theme-renderer-0.1.0.tgz`, `SHA256SUMS.txt`, `compatibility-manifest.json` (machine-
+  readable provenance: release tag, source commit, both package versions, theme/project format
+  versions, Node/pnpm requirements, filenames, sizes, SHA-256 checksums, release timestamp).
+  Checksums:
+  ```
+  74dd118b2ea92fe578d219e41e0b21bfdcb73daffa31e2752cbd9b40b729477c  fdraft-theme-sdk-0.1.0.tgz
+  ddd6e1e57a74bbfb936d0547fcd6fddb1e5026531766e553303885dfb0b1f0e2  fdraft-theme-renderer-0.1.0.tgz
+  ```
+- **Format versions carried by this release** (from `packages/theme-sdk/src/schema/versions.ts`,
+  independent of the packages' own semver): project format `1.0.0`, theme format `1.0.0`,
+  minimum-supported project format `0.9.0`, minimum-supported theme format `1.0.0`,
+  SDK/renderer contract version `0.1.0`.
+- **Pre-tag verification actually performed** (not just asserted): both `.tgz` archives were
+  inspected (runtime files, type declarations, `package.json`, LICENSE/README only — no dev
+  fixtures, no source-tree ZIP, no `node_modules`); a fresh, out-of-workspace consumer project
+  installed both packed tarballs via the committed `pnpm-workspace.yaml`/lockfile toolchain
+  and ran a real functional smoke test — `createProject`/`validateProject`/`compileTheme`
+  from `theme-sdk`, and `evaluateCondition`/`resolveActiveBehaviourRules`/a real
+  `ThemeRenderer` React SSR render (`renderToStaticMarkup`, asserting authored copy text and
+  the `data-fdraft-stage` marker both appear) from `theme-renderer` — all passed; the original
+  tarball directory was then moved away and the smoke test re-run unchanged against the
+  already-installed consumer, proving the install doesn't retain a live path back to the
+  source tree.
+- **Post-publish verification actually performed:** both assets plus `SHA256SUMS.txt` were
+  downloaded back from the live, public Release via unauthenticated `curl` (no `Authorization`
+  header — confirming the public-repo, no-auth distribution model actually works for a real
+  external client, not just for the account that published it); `shasum -a 256 -c
+  SHA256SUMS.txt` against the downloaded bytes reported `OK` for both; a second, independent
+  fresh consumer installed and smoke-tested those exact downloaded bytes with the same passing
+  result. Tag, Release `targetCommitish`, and `compatibility-manifest.json`'s `sourceCommit`
+  all agree with the pushed `main` HEAD (see above).
+- **Genuinely new finding, not previously documented:** a scoped package's own bare-semver
+  internal dependency (`theme-renderer`'s packed `"@fdraft/theme-sdk": "0.1.0"`) makes pnpm
+  attempt a public-registry resolution by default even when that same package is already
+  present as a `file:`/URL-sourced top-level dependency in the consumer. Fix: the consumer adds
+  an `overrides` entry in its own `pnpm-workspace.yaml` (not `package.json`'s `"pnpm"` field,
+  which pnpm 11 no longer reads) pointing `@fdraft/theme-sdk` at the same tarball/URL source.
+  Prompt 10's FDraft-side `pnpm-workspace.yaml` will need this same override. Written up in the
+  Release's own notes; see `docs/architecture/COMPATIBILITY_AND_RELEASES.md` for the
+  repository-level record.
+- **Exact values for Prompt 10 to pin:**
+  ```json
+  "@fdraft/theme-sdk": "https://github.com/Burrichen/FDraft-Studio/releases/download/theme-runtime-v0.1.0/fdraft-theme-sdk-0.1.0.tgz",
+  "@fdraft/theme-renderer": "https://github.com/Burrichen/FDraft-Studio/releases/download/theme-runtime-v0.1.0/fdraft-theme-renderer-0.1.0.tgz"
+  ```
+  plus the `pnpm-workspace.yaml` override above for `@fdraft/theme-sdk` pointing at the same
+  SDK URL, and a checksum cross-check against the two SHA-256 values recorded here before
+  either URL is added to FDraft's own lockfile.
+- FDraft was not touched by this release — confirmed via `git status` in `../FDraft` before
+  starting and not modified at any point during this task.
+
+## Current blockers
 - Known-good FDraft base: `main` (`v1.2.0-beta.9`) is the candidate; needs explicit user
   confirmation before Prompt 10. The sibling checkout is currently sitting on
   `feat/dev-build1-event-studio` (the failed Event Studio branch), 9 commits ahead of

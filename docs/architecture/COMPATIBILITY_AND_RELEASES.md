@@ -51,7 +51,39 @@ Releases and tags are immutable once published — never edit or force-move a `t
 
 ### Current status
 
-No tag has been pushed for either package yet — both release workflows are authored and their underlying operations tested (the CI gate, the pack/checksum steps, and every `pack`/`compile`/`verify` operation are exercised by each package's own test suite against real in-memory archives, and `pnpm pack` has been run manually to confirm the workspace-dependency rewrite) but **not executed as an actual release**, since cutting the first tag is a deliberate action for the repository owner, not something to do unprompted. See `docs/IMPLEMENTATION_STATUS.md`.
+The first release has been cut, by explicit repository-owner authorization: tag
+`theme-runtime-v0.1.0` on commit `d1c876bc5b8ac784c801da450976386bc42d68a9`, GitHub Release
+["FDraft Theme Runtime
+v0.1.0"](https://github.com/Burrichen/FDraft-Studio/releases/tag/theme-runtime-v0.1.0), both
+packages at `0.1.0`. Full evidence (checksums, verification steps, exact FDraft-side values to
+pin) is in `docs/IMPLEMENTATION_STATUS.md`'s "Release: `theme-runtime-v0.1.0`" section — this
+section instead records what differs from the per-package plan originally documented above:
+
+- **One combined tag/release, not two.** The `release-theme-sdk.yml` / `release-theme-renderer.yml`
+  workflows above describe firing on separate `theme-sdk-v<version>` / `theme-renderer-v<version>`
+  tags. For this first release the repository owner explicitly asked for one `theme-runtime-v0.1.0`
+  tag and one Release covering both packages together, as a single tested compatibility pair —
+  reasonable for a first release where the SDK and renderer are versioned in lockstep and have
+  never been consumed independently by anything outside this monorepo. The combined tag/release
+  was assembled by manually replicating the existing workflows' own verify → pack → checksum →
+  `gh release create` sequence (neither per-package workflow fires on a `theme-runtime-v*` tag, so
+  neither actually ran). The two separate workflows are unchanged and remain available for a future
+  release where the packages' versions diverge or need independent release cadence — at that point,
+  use the per-package tags they're already wired for instead of extending the combined scheme.
+- **pnpm consumer requirement, discovered during this release's pre-tag verification:**
+  `@fdraft/theme-renderer`'s packed `package.json` pins its own dependency on
+  `@fdraft/theme-sdk` as a bare semver (`"0.1.0"`), which pnpm resolves against the public npm
+  registry by default — even when the consumer already declares `@fdraft/theme-sdk` as a
+  top-level `file:`/URL dependency pointing at the correct tarball. A consuming project (FDraft
+  included) must add an `overrides` entry to its own `pnpm-workspace.yaml` (not `package.json`'s
+  `"pnpm"` field — pnpm 11 no longer reads that) redirecting `@fdraft/theme-sdk` to the same
+  tarball/URL source it already declared at the top level:
+  ```yaml
+  overrides:
+    "@fdraft/theme-sdk": "https://github.com/Burrichen/FDraft-Studio/releases/download/theme-runtime-v0.1.0/fdraft-theme-sdk-0.1.0.tgz"
+  ```
+  Verified against two independent fresh consumers, including one installing the actual
+  published (downloaded, checksum-verified) Release assets rather than the locally packed ones.
 
 ## Release sequence
 
