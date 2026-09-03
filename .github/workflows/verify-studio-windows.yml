@@ -1,0 +1,134 @@
+name: Verify Studio Windows installer (artifact-only, no tag/Release)
+
+# Manually triggered ONLY (`workflow_dispatch`) — deliberately separate from
+# release-studio-windows.yml, which is tag-triggered and creates a real
+# GitHub Release via tauri-apps/tauri-action. This workflow exists to build
+# and verify a real Windows installer from an arbitrary commit WITHOUT
+# creating a Git tag or a GitHub Release — it uploads the installer, its
+# SHA-256 checksum, and a release-candidate manifest as a plain GitHub
+# Actions build artifact (auto-expiring, not a Release asset).
+#
+# Same windows-latest constraint as release-studio-windows.yml applies —
+# see that workflow's own header comment for why macOS cross-compilation
+# is infeasible in this project's actual toolchain.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/studio/src-tauri
+
+      - run: pnpm install --frozen-lockfile
+
+      # The same gate release-studio-windows.yml and ci.yml's studio-frontend
+      # job both run — a verification build is worthless if it ships a
+      # binary the test suite wouldn't have allowed to release.
+      - run: pnpm run check:architecture
+      - run: pnpm run check:boundaries
+      - run: pnpm run lint
+      - run: pnpm --filter @fdraft/theme-sdk typecheck
+      - run: pnpm --filter @fdraft/theme-sdk test
+      - run: pnpm --filter @fdraft/theme-sdk build
+      - run: pnpm --filter @fdraft/theme-renderer typecheck
+      - run: pnpm --filter @fdraft/theme-renderer test
+      - run: pnpm --filter @fdraft/theme-renderer build
+      - run: pnpm --filter @fdraft/studio typecheck
+      - run: pnpm --filter @fdraft/studio test
+
+      - name: Build the real NSIS installer
+        run: pnpm --filter @fdraft/studio tauri:build
+
+      # Renames the bundler's own output to the required artifact-name
+      # convention, computes its SHA-256, and writes a machine-readable
+      # candidate manifest describing exactly this build — never a
+      # different one. testedFdraftVersion/testedFdraftCommit are left
+      # null here: this job never checks out or runs FDraft, so it cannot
+      # honestly claim that verification — a separate, manual step against
+      # a real FDraft checkout fills those in before the candidate is
+      # considered fully verified (see docs/guides/RELEASE_CHECKLIST.md).
+      - name: Package artifacts and candidate manifest
+        id: package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $appVersion = (node -p "require('./apps/studio/package.json').version")
+          $sdkVersion = (node -p "require('./packages/theme-sdk/package.json').version")
+          $rendererVersion = (node -p "require('./packages/theme-renderer/package.json').version")
+          # versions.ts is TS, not JSON — read the two constants directly rather than requiring it.
+          $versionsSrc = Get-Content -Raw "packages/theme-sdk/src/schema/versions.ts"
+          $projectFormatVersion = [regex]::Match($versionsSrc, 'CURRENT_PROJECT_FORMAT_VERSION\s*=\s*"([^"]+)"').Groups[1].Value
+          $minProjectFormatVersion = [regex]::Match($versionsSrc, 'MIN_SUPPORTED_PROJECT_FORMAT_VERSION\s*=\s*"([^"]+)"').Groups[1].Value
+          $themeFormatVersion = [regex]::Match($versionsSrc, 'CURRENT_THEME_FORMAT_VERSION\s*=\s*"([^"]+)"').Groups[1].Value
+
+          $bundleDir = "apps/studio/src-tauri/target/release/bundle/nsis"
+          $installer = Get-ChildItem -Path $bundleDir -Filter "*.exe" | Select-Object -First 1
+          if (-not $installer) {
+            throw "No NSIS .exe installer found under $bundleDir"
+          }
+
+          $artifactName = "FDraft-Studio-$appVersion-Windows-x64-Setup.exe"
+          $outDir = "dist-release"
+          New-Item -ItemType Directory -Path $outDir -Force | Out-Null
+          $artifactPath = Join-Path $outDir $artifactName
+          Copy-Item $installer.FullName $artifactPath
+
+          $hash = (Get-FileHash -Path $artifactPath -Algorithm SHA256).Hash.ToLower()
+          $size = (Get-Item $artifactPath).Length
+          "$hash  $artifactName" | Out-File -FilePath (Join-Path $outDir "$artifactName.sha256") -Encoding ascii -NoNewline
+
+          $manifest = [ordered]@{
+            appVersion               = $appVersion
+            sourceCommitSha          = "$env:GITHUB_SHA"
+            windowsTarget            = "x64"
+            cpuArchitecture          = "x64"
+            installerFormat          = "nsis"
+            installerFilename        = $artifactName
+            fileSizeBytes            = $size
+            sha256                   = $hash
+            sdkVersion               = $sdkVersion
+            rendererVersion          = $rendererVersion
+            themeFormatVersion       = $themeFormatVersion
+            projectFormatVersion     = $projectFormatVersion
+            minSupportedProjectFormatVersion = $minProjectFormatVersion
+            minCompatibleFdraftRef   = "commit 006035c on branch feature/fdraft-theme-runtime (first FDraft commit supporting all 14 default-template component keys plus the behaviour/effects capabilities) or later, pinned to theme-runtime-v0.1.0"
+            testedFdraftVersion      = $null
+            testedFdraftCommit       = $null
+            signingStatus            = "unsigned — no Authenticode certificate available for this project"
+            buildTimestampUtc        = (Get-Date).ToUniversalTime().ToString("o")
+            testedWindowsVersions    = @("windows-latest GitHub Actions runner (Windows Server 2022) — no additional Windows version tested yet")
+            tutorialVersion          = "1"
+            tutorialContentRevision  = "$env:GITHUB_SHA"
+          }
+          $manifest | ConvertTo-Json -Depth 5 | Out-File -FilePath (Join-Path $outDir "candidate-manifest.json") -Encoding utf8
+
+          Write-Host "Installer: $artifactPath"
+          Write-Host "SHA-256:   $hash"
+          Get-Content (Join-Path $outDir "candidate-manifest.json")
+
+          echo "artifact_name=$artifactName" >> $env:GITHUB_OUTPUT
+          echo "sha256=$hash" >> $env:GITHUB_OUTPUT
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fdraft-studio-windows-installer
+          path: dist-release/
+          retention-days: 30
+          if-no-files-found: error

@@ -93,8 +93,14 @@ describe("Tutorial", () => {
       await user.click(screen.getByRole("button", { name: "Skip for Now" }));
       expect(screen.queryByRole("dialog", { name: "FDraft Studio Tutorial" })).not.toBeInTheDocument();
 
-      const saved = await loadTutorialState(context.platform, context.paths);
-      expect(saved).toEqual({ completed: false, hasBeenShown: true });
+      // TutorialContext.close() fires its state-persisting write without
+      // awaiting it (a deliberate fire-and-forget, matching recentProjects'
+      // own established pattern) — poll for the write to land rather than
+      // assuming it's already flushed to disk the instant the click resolves.
+      await waitFor(async () => {
+        const saved = await loadTutorialState(context.platform, context.paths);
+        expect(saved).toEqual({ completed: false, hasBeenShown: true });
+      });
     });
   });
 
@@ -131,8 +137,10 @@ describe("Tutorial", () => {
       await user.click(screen.getByRole("button", { name: "Finish" }));
 
       expect(screen.queryByRole("dialog", { name: "FDraft Studio Tutorial" })).not.toBeInTheDocument();
-      const saved = await loadTutorialState(context.platform, context.paths);
-      expect(saved).toEqual({ completed: true, hasBeenShown: true });
+      await waitFor(async () => {
+        const saved = await loadTutorialState(context.platform, context.paths);
+        expect(saved).toEqual({ completed: true, hasBeenShown: true });
+      });
     });
   });
 
