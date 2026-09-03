@@ -59,6 +59,26 @@ Differences from `rc` above, all of them verification improvements:
   bug was found by downloading the artifact and actually running the check, and it would have
   failed the publish job's own checksum gate on every release.
 
+## `studio-0.1.0-rc3-*` — commit `d686f5f` (current candidate)
+
+**This is the candidate to test and release.** Produced by run
+[33794749108](https://github.com/Burrichen/FDraft-Studio/actions/runs/33794749108):
+installer SHA-256 `124b141b6752a180e27840f9a735a69ac8ab960b5dc370c9d5896f9e037a1098`,
+2,367,054 bytes. All 20 Windows smoke checks pass, and `sha256sum -c` was confirmed against
+the really-downloaded artifact.
+
+What changed from `rc2`, and why the binary differs:
+
+- **Publisher identity corrected.** It was `"FDraft Studio"` — a product name where a legal
+  entity belongs — and is now `"Burrichen"`, matching FDraft's own convention and the
+  `LICENSE` copyright holder. That is embedded in the binary, hence a new checksum. The smoke
+  suite now asserts `Publisher` against the real identity **and** asserts `DisplayName`
+  separately, since `DisplayName` ("FDraft Studio" vs FDraft's "FDraft (Beta)") is what
+  actually distinguishes the two applications in Programs and Features.
+- **Licence assets now ship with the release**: `LICENSE.txt` (MIT, © 2026 Burrichen) and the
+  generated `THIRD_PARTY_NOTICES.md` covering 277 redistributed packages. The build fails if
+  the notices file is absent.
+
 ### A correction this candidate's manifest carries
 
 `studio-0.1.0-rc-manifest.json` (written by run 33786939789) records a single
