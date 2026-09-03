@@ -1,0 +1,32 @@
+{
+  "appVersion": "0.1.0",
+  "tag": "studio-v0.1.0",
+  "commitSha": "79f7c90fe56af5f93e22aa99663a5061fdef1ae9",
+  "buildTarget": "windows",
+  "architecture": "x64",
+  "installerFormat": "nsis",
+  "artifactFilename": "FDraft-Studio-0.1.0-Windows-x64-Setup.exe",
+  "fileSizeBytes": 2365709,
+  "sha256": "8ec84d04cf325c9cbf2037ea7b31f5b5f83d9ab6773fbc56ef9e48b806310282",
+  "themeSdkVersion": "0.1.0",
+  "themeRendererVersion": "0.1.0",
+  "themeFormatVersion": "1.0.0",
+  "minSupportedThemeFormatVersion": "1.0.0",
+  "projectFormatVersion": "1.0.0",
+  "minSupportedProjectFormatVersion": "0.9.0",
+  "minCompatibleFdraftCommit": "006035c",
+  "minCompatibleFdraftVersion": "1.2.0-beta.9",
+  "minCompatibleFdraftNote": "FDraft commit 006035c on the (unmerged) branch feature/fdraft-theme-runtime or later — the first FDraft commit whose theme runtime supports all 14 default-template component keys plus the behaviour and effects capabilities, pinned to theme-runtime-v0.1.0",
+  "lastVerifiedFdraftCommit": "bed5426",
+  "testedFdraftVersion": null,
+  "testedFdraftCommit": null,
+  "testedFdraftPlatform": null,
+  "signingStatus": "unsigned - no Authenticode code-signing certificate exists for this project",
+  "buildTimestampUtc": "2026-09-03T19:33:06.2400786Z",
+  "workflowRunId": "33796456397",
+  "workflowRunAttempt": "1",
+  "testedWindowsVersions": [
+    "windows-latest GitHub Actions runner (Windows Server 2022), x64"
+  ],
+  "tutorialContentRevision": "79f7c90fe56af5f93e22aa99663a5061fdef1ae9"
+}
