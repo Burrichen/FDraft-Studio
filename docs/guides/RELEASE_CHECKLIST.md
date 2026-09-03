@@ -74,6 +74,76 @@ superseding row 13's earlier, honest partial-compatibility snapshot):
 All three: zero console errors against a real running FDraft `next dev` server, no
 compatibility exceptions, no reduced/custom structure.
 
+## D. Rolling back
+
+- **A bad SDK/renderer release**: never edit or force-move the existing tag. Cut a new patch
+  tag with the fix and repoint FDraft's dependency URL at it (step B). Optionally mark the
+  bad release as deprecated/pre-release on GitHub — the asset itself stays, since something
+  may still reference it.
+- **A bad Studio publish into FDraft**: reopen **Publish to FDraft** in Studio and use **Undo
+  this publish** (one generation of backup is always kept). This restores
+  `theme-projects/<slug>/`/`src/theme-packs/<slug>/` on disk; if the bad publish was already
+  committed in FDraft, that still needs an ordinary `git revert` there — Studio never commits.
+- **A bad Studio Windows installer release**: the tag/release are immutable like the SDK/
+  renderer case — cut a new `studio-v<version>` tag with the fix.
+
+## E. Windows installer readiness — verified on real Windows
+
+Superseding this section's earlier "written but never run" state. A real Windows installer
+has now been built and machine-verified. Evidence:
+`docs/releases/candidates/studio-0.1.0-rc-*` (committed verbatim from the run).
+
+**Done, with evidence:**
+
+- [x] `apps/studio/src-tauri/tauri.conf.json` carries a distinct product identity —
+      `productName` "FDraft Studio", `identifier` `com.fdraftstudio.app` (FDraft's own is
+      `com.burrichen.fdraft`, so Windows derives entirely separate app-data/config/cache
+      directories automatically), executable `fdraft-studio.exe` (FDraft's is `fdraft.exe`),
+      `publisher`/`copyright`/`category`/`shortDescription` set, and NSIS
+      `installMode: "currentUser"` — no administrator prompt.
+- [x] `bundle.targets` narrowed from `"all"` to `["nsis"]`. No `.msi` is produced: a second
+      installer format that nothing has verified is worse than one that is verified.
+- [x] Icon is a genuine multi-resolution `.ico` (16/24/32/48/64/256 px, 32-bit) and is not a
+      copy of FDraft's (confirmed by SHA-256 comparison). Tauri's NSIS bundler reuses it for
+      the installer, executable, and uninstaller.
+- [x] The application version is identical across `apps/studio/package.json`,
+      `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml`, and the release workflow now
+      **fails** if those three — or the pushed tag — ever disagree.
+- [x] Real NSIS installer built on `windows-latest`:
+      `FDraft-Studio-0.1.0-Windows-x64-Setup.exe`, 2,364,401 bytes, SHA-256
+      `5dbcf4b7c301d6fc56d6221a07b97976ad38030d6880c5cd4720504011c17420` — checksum
+      re-verified after download, so it describes the distributed bytes, not just the build
+      machine's copy.
+- [x] Windows smoke suite passed on the packaged application: silent install exits 0;
+      uninstall registry entry created with the correct `DisplayVersion` (0.1.0) and
+      `Publisher` ("FDraft Studio", not FDraft); `InstallLocation` reported; installed
+      executable present; Start Menu shortcut created; the installed app launches and stays
+      running (no immediate crash); silent uninstall exits 0; registry entry, executable and
+      shortcut all removed; app-data preserved.
+- [x] **Not code-signed** — no Authenticode certificate exists for this project. A fresh
+      install shows a SmartScreen "unknown publisher" warning. Documented accurately in
+      `docs/guides/WINDOWS_INSTALL.md` and the release notes, never worked around by telling
+      users to disable Windows Security. No signing secret is referenced by any workflow.
+- [x] Cross-compilation is confirmed infeasible in this toolchain (the Rust `ring` crate
+      needs a Windows C toolchain macOS cannot supply), so `windows-latest` is the only real
+      build path — recorded in the workflow's own header rather than rediscovered.
+
+**Windows-specific bugs this first real Windows run actually caught** (all fixed; each was a
+genuine defect, not CI noise — see `docs/IMPLEMENTATION_STATUS.md` for detail):
+
+- No `.gitattributes`, so `windows-latest`'s default `core.autocrlf=true` rewrote committed
+  text fixtures to CRLF on checkout and broke content-hash manifest verification. A Windows
+  contributor with Git for Windows' own default would have hit this identically.
+- `spawnSync("npx", …)` never launched on Windows (a `.cmd` shim needs a shell).
+- `joinPath` fell back to POSIX separators for bare relative segments on any host.
+- `node_modules/.bin/tsx` spawned by literal path — POSIX-only shim.
+- Two real test races (a fire-and-forget state write, and a focus-on-mount effect) that only
+  a differently-scheduled runner exposed.
+- **`simulationCoverage.test.tsx` was never actually hermetic** — it read real event artwork
+  from the sibling `../FDraft` checkout, so ordinary Linux CI had been failing on every commit
+  since `b4fd8cb` while local runs passed. Fixed with committed synthetic fixtures; CI is
+  green again.
+
 ## F. Studio release-candidate readiness (unchanged behaviour + built-in tutorial)
 
 Preparing a release-candidate *source state* — not cutting a tag, packaging an installer, or
@@ -112,29 +182,57 @@ the full evidence this section summarizes.
       does not import or embed any FDraft source).
 - [ ] No Git tag, GitHub Release, or installer was created by this phase.
 
-## D. Rolling back
+## G. Publishing the Windows release on GitHub
 
-- **A bad SDK/renderer release**: never edit or force-move the existing tag. Cut a new patch
-  tag with the fix and repoint FDraft's dependency URL at it (step B). Optionally mark the
-  bad release as deprecated/pre-release on GitHub — the asset itself stays, since something
-  may still reference it.
-- **A bad Studio publish into FDraft**: reopen **Publish to FDraft** in Studio and use **Undo
-  this publish** (one generation of backup is always kept). This restores
-  `theme-projects/<slug>/`/`src/theme-packs/<slug>/` on disk; if the bad publish was already
-  committed in FDraft, that still needs an ordinary `git revert` there — Studio never commits.
-- **A bad Studio Windows installer release**: the tag/release are immutable like the SDK/
-  renderer case — cut a new `studio-v<version>` tag with the fix.
+The release workflow (`.github/workflows/release-studio-windows.yml`) is the only publish
+path. It is least-privilege by construction: the workflow defaults to `contents: read`, the
+`verify` and `build-windows` jobs are read-only, and **only** the `publish` job takes
+`contents: write`. `publish` is additionally gated on `startsWith(github.ref, 'refs/tags/')`,
+so the `workflow_dispatch` path can build and smoke-test a candidate but can never publish.
+Every action is pinned to a commit SHA, dependencies install from the committed lockfile with
+`--frozen-lockfile`, and the job refuses to overwrite an existing Release.
 
-## E. Windows installer readiness (current, honest state)
+**How to publish, once the outstanding gate below is satisfied:**
 
-- [ ] `apps/studio/src-tauri/tauri.conf.json` has correct `publisher`/`copyright`/`category`/
-      `shortDescription`/Windows `nsis.installMode` before tagging.
-- [ ] `studio-v<version>` tag matches `apps/studio/package.json`'s version exactly.
-- [ ] **Not code-signed** — no Authenticode certificate exists for this project. A fresh
-      install will show a SmartScreen "unknown publisher" warning. This is expected; do not
-      claim a signed release anywhere in release notes.
-- [ ] Actually running `release-studio-windows.yml` (which requires pushing the tag) and
-      verifying the resulting installer on a real Windows machine has **not** been done as of
-      this checklist's last update — the workflow is written and reasoned through against
-      FDraft's own proven, identical pattern, but "does it actually produce a working
-      installer" is confirmed only by running it.
+1. Confirm the working tree is clean and `main` is at the exact commit whose installer was
+   verified.
+2. `git tag studio-v<version>` on that commit, then `git push origin studio-v<version>`.
+   The workflow verifies the tag against all three in-repo version files before building.
+3. The workflow builds, runs the full matrix plus the Windows smoke suite, re-verifies the
+   artifact's SHA-256 *after* download (proving the published bytes are the tested bytes),
+   confirms `release-manifest.json` names that exact artifact/tag/commit, and only then
+   creates the Release as a **pre-release** with the installer, `SHA256SUMS.txt` and
+   `release-manifest.json` attached.
+4. Verify the *published* download by repeating the post-publication steps below. A green
+   Actions run is not by itself proof that the published release works.
+
+- [ ] **Outstanding gate — human clean-Windows verification.** Machine verification
+      (install/launch/uninstall/reinstall, checksums, the full test matrix on Windows) is
+      done and green. What is **not** done, and cannot be done from a headless CI runner or
+      a macOS workstation, is the interactive pass: walking the built-in tutorial in the
+      installed app, creating a project, opening each official starter project, importing an
+      image, direct text editing, Copy Workspace, pop-up editing, save/reopen, recovery,
+      responsive preview, event simulation, behaviours, effects, `.fdstudio` export/import,
+      `.fdtheme` compilation, and rendering a real exported theme **in a compatible Windows
+      FDraft build** (Halloween, Christmas and January), including incompatible-theme and
+      corrupt-theme rejection and last-known-good fallback. No interactive Windows
+      environment and no Windows FDraft build exist yet — FDraft's own release workflow has
+      never been run — so `testedFdraftVersion`/`testedFdraftCommit` are `null` in the
+      candidate manifest. Do not publish, and do not fill those fields, until a person has
+      actually run this pass and recorded the results here.
+- [ ] **No licence is declared anywhere in this repository** — no `LICENSE` file, and no
+      `license` field in any `package.json`. For a public release that is a real gap: without
+      a licence, downloaders have no granted rights, and "licence and third-party notices"
+      cannot be attached because none exist. Choosing a licence is the owner's decision, not
+      something a release process should invent. Resolve before publishing publicly.
+- [ ] Release channel: **pre-release**, because the installer is unsigned and this is the
+      first public compatibility trial. The workflow passes `--prerelease` so it is never
+      marked "Latest". Do not switch to a stable channel merely to avoid documenting a
+      limitation.
+- [ ] After publishing: download the installer *from the Release page*, verify its SHA-256
+      against the attached `SHA256SUMS.txt`, confirm `release-manifest.json` names the right
+      tag and commit, install it on a clean Windows machine, launch it, open the tutorial,
+      open an official starter project, export a theme, test that theme in the compatible
+      FDraft build, uninstall, and confirm both your projects and FDraft are unaffected.
+- [ ] Never delete, move or force-update a published tag or Release. Cut a new patch tag
+      instead (see section D).

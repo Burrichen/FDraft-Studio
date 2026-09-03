@@ -1,113 +1,507 @@
 name: Release Studio (Windows installer)
 
-# Fires on a Studio-specific version tag (e.g. studio-v0.1.0) — separate
-# tag namespace from theme-sdk-v*/theme-renderer-v*/theme-runtime-v*,
-# which release the shared SDK/renderer packages, not the Studio
-# application itself.
+# Publishes ONE GitHub Release for a confirmed `studio-v<version>` tag, built
+# and verified from that exact tagged commit — and nothing else. Replaces the
+# earlier `tauri-apps/tauri-action` version of this workflow, which coupled
+# building and Release creation into a single step with repository-wide
+# `contents: write` and unpinned actions. It also supersedes the temporary
+# `verify-studio-windows.yml` artifact-only verifier: this workflow's
+# `workflow_dispatch` path does the identical build + Windows smoke suite and
+# stops before publishing, so there is exactly one canonical release path.
 #
-# Windows-only, `runs-on: windows-latest`, deliberately — cross-compiling
-# a Windows Tauri/NSIS bundle from macOS was tried and confirmed
-# infeasible in this project's actual toolchain (fails compiling the
-# `ring` crate for lack of a Windows C toolchain/SDK, which `rustup`
-# alone cannot supply on macOS; this is FDraft's own already-proven
-# finding for the identical Tauri v2 stack, not a new discovery here —
-# see FDraft/docs/product-spec.md, "Windows installer packaging"). A real
-# `.exe`/NSIS installer needs an actual Windows toolchain, which only a
-# `windows-latest` GitHub Actions runner reliably provides.
+# Trigger model:
+#   - tag push (`studio-v*.*.*`)  -> verify, build, smoke-test, then PUBLISH.
+#   - workflow_dispatch           -> verify, build, smoke-test, upload build
+#                                    artifacts. The publish job is gated on
+#                                    `startsWith(github.ref, 'refs/tags/')`,
+#                                    so a manual run can never publish.
 #
-# No Windows publisher/Authenticode signing — there is no code-signing
-# certificate available for this project. A fresh install will show an
-# unsigned-publisher SmartScreen warning; this is accurately documented
-# (see docs/guides/RELEASE_CHECKLIST.md) rather than silently omitted or
-# falsely implied as solved. This mirrors FDraft's own accurate
-# "no Windows publisher/Authenticode signing" note for the identical
-# situation.
+# Windows-only, `windows-latest`, deliberately: cross-compiling a Windows
+# Tauri/NSIS bundle from macOS was tried and confirmed infeasible in this
+# project's actual toolchain (fails compiling the `ring` crate for lack of a
+# Windows C toolchain/SDK, which `rustup` alone cannot supply on macOS — see
+# FDraft/docs/product-spec.md, "Windows installer packaging"). No macOS or
+# Linux target is produced; Studio is Windows-only today.
 #
-# No auto-update infrastructure — Studio's `tauri.conf.json` deliberately
-# has no `plugins.updater`/`createUpdaterArtifacts`, unlike FDraft's own
-# Tauri config. FDraft's updater is FDraft-specific (its own signing key,
-# its own release-endpoint), and reusing or duplicating it here would
-# couple the two applications' release processes — explicitly avoided.
+# NOT code-signed — there is no Authenticode certificate for this project, so
+# no signing secret is referenced anywhere below and the manifest/release notes
+# say so plainly. A fresh install shows a SmartScreen "unknown publisher"
+# warning; that is expected and documented, never worked around by telling
+# users to disable Windows Security.
+#
+# No auto-update infrastructure: `tauri.conf.json` deliberately has no
+# `plugins.updater`/`createUpdaterArtifacts`. FDraft's own updater is
+# FDraft-specific (its own signing key and release endpoint) and reusing it
+# here would couple the two applications' release processes.
 on:
   push:
     tags:
       - "studio-v*.*.*"
+  workflow_dispatch:
+
+# Read-only by default for every job. Only `publish` widens this, and only to
+# `contents: write`, the minimum needed to create a Release on this repository.
+permissions:
+  contents: read
 
 jobs:
-  release:
-    runs-on: windows-latest
+  # Cheap, cross-platform gate first: nothing Windows-specific here, so a
+  # broken lockfile/lint/type/contract error fails in ~2 minutes instead of
+  # after a full Rust build.
+  verify:
+    name: Verify (versions, lint, types, contract, SDK + renderer tests)
+    runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: pnpm
 
-      - uses: dtolnay/rust-toolchain@stable
+      - run: pnpm install --frozen-lockfile
 
-      - uses: Swatinem/rust-cache@v2
+      # A tag, the workspace application package, and the Tauri config
+      # disagreeing on the version almost always means a forgotten bump —
+      # catching it here beats shipping an installer whose bundled binary
+      # silently disagrees with its own Release tag. On a manual run there is
+      # no tag to compare, so the three in-repo files are still cross-checked.
+      - name: Reject version mismatches (tag vs package vs Tauri vs Cargo)
+        shell: bash
+        run: |
+          set -euo pipefail
+          PKG_VERSION=$(node -p "require('./apps/studio/package.json').version")
+          TAURI_VERSION=$(node -p "require('./apps/studio/src-tauri/tauri.conf.json').version")
+          CARGO_VERSION=$(grep -m1 '^version' apps/studio/src-tauri/Cargo.toml | sed -E 's/.*"(.*)".*/\1/')
+          echo "package.json=$PKG_VERSION tauri.conf.json=$TAURI_VERSION Cargo.toml=$CARGO_VERSION"
+          if [ "$PKG_VERSION" != "$TAURI_VERSION" ] || [ "$PKG_VERSION" != "$CARGO_VERSION" ]; then
+            echo "::error::Version mismatch between apps/studio/package.json ($PKG_VERSION), src-tauri/tauri.conf.json ($TAURI_VERSION) and src-tauri/Cargo.toml ($CARGO_VERSION)."
+            exit 1
+          fi
+          if [ "${GITHUB_REF_TYPE:-}" = "tag" ]; then
+            TAG_VERSION="${GITHUB_REF_NAME#studio-v}"
+            if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+              echo "::error::Tag $GITHUB_REF_NAME does not match application version $PKG_VERSION — bump and commit before tagging."
+              exit 1
+            fi
+            echo "Tag $GITHUB_REF_NAME matches application version $PKG_VERSION."
+          else
+            echo "Manual run: no tag to compare (this run cannot publish)."
+          fi
+
+      # This repository has no separate formatter (no Prettier dependency or
+      # config exists) — ESLint is the sole style/lint gate, run here rather
+      # than claiming a formatting step that does not exist.
+      - run: pnpm run lint
+      - run: pnpm run check:architecture
+      - run: pnpm run check:boundaries
+
+      - run: pnpm --filter @fdraft/theme-sdk typecheck
+      - run: pnpm --filter @fdraft/theme-sdk build
+      - name: Schema drift check (generated schemas match source)
+        run: pnpm run check:schemas
+
+      - name: SDK tests (full suite)
+        run: pnpm --filter @fdraft/theme-sdk test
+
+      # The categories below all live inside the suites above. Re-running them
+      # by path costs seconds and makes each required category's result
+      # explicit in the log, instead of asserting coverage that a reader has to
+      # take on trust.
+      - name: "Named category: schema + migration tests"
+        run: pnpm --filter @fdraft/theme-sdk exec vitest run test/schema test/migration
+      - name: "Named category: package round-trip tests (.fdstudio/.fdtheme)"
+        run: pnpm --filter @fdraft/theme-sdk exec vitest run test/packaging/fdstudio.test.ts test/packaging/fdtheme.test.ts test/schema/roundtrip.test.ts
+      - name: "Named category: security + archive/SVG safety tests"
+        run: pnpm --filter @fdraft/theme-sdk exec vitest run test/packaging/security.test.ts test/validation/svg.test.ts
+
+      - run: pnpm --filter @fdraft/theme-renderer typecheck
+      - run: pnpm --filter @fdraft/theme-renderer build
+      - name: Renderer tests (full suite)
+        run: pnpm --filter @fdraft/theme-renderer test
+      - name: "Named category: renderer-parity tests (same renderer as FDraft)"
+        run: pnpm --filter @fdraft/theme-renderer exec vitest run test/integration/renderSampleFixture.test.tsx
+
+  build-windows:
+    name: Build + smoke-test the Windows x64 installer
+    needs: verify
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    outputs:
+      artifact_name: ${{ steps.package.outputs.artifact_name }}
+      sha256: ${{ steps.package.outputs.sha256 }}
+      app_version: ${{ steps.package.outputs.app_version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: apps/studio/src-tauri
 
       - run: pnpm install --frozen-lockfile
 
-      # A tag that doesn't match apps/studio/package.json's own version
-      # almost always means the version bump was forgotten before
-      # tagging — catching it here beats shipping an installer whose
-      # bundled binary silently disagrees with its own GitHub Release tag.
-      - name: Verify tag matches apps/studio/package.json version
+      # Re-run the workspace gate on Windows too: the Studio suite is where
+      # real Windows path/line-ending/spawn behaviour actually shows up. Every
+      # one of those three classes produced a genuine, previously-unnoticed bug
+      # the first time this ran on a real Windows runner.
+      - run: pnpm run lint
+      - run: pnpm run check:architecture
+      - run: pnpm run check:boundaries
+      - run: pnpm --filter @fdraft/theme-sdk build
+      - run: pnpm --filter @fdraft/theme-renderer build
+      - run: pnpm --filter @fdraft/studio typecheck
+
+      - name: Studio tests (full suite, on Windows)
+        run: pnpm --filter @fdraft/studio test
+
+      - name: "Named category: built-in tutorial tests"
+        run: pnpm --filter @fdraft/studio exec vitest run test/tutorial test/ui/TutorialPanel.test.tsx
+      - name: "Named category: official event-project tests (Halloween, Christmas, January)"
+        run: pnpm --filter @fdraft/studio exec vitest run test/starterEvents
+      - name: "Named category: Windows path handling + save/recovery tests"
+        run: pnpm --filter @fdraft/studio exec vitest run test/platform/pathUtils.test.ts test/project/atomicSave.test.ts test/project/projectFile.test.ts test/project/errorClassification.test.ts
+      - name: "Named category: accessibility + performance-inspector tests"
+        run: pnpm --filter @fdraft/studio exec vitest run test/ui/useModalA11y.test.tsx test/performance
+
+      - name: Build the Windows x64 NSIS installer
+        run: pnpm --filter @fdraft/studio tauri:build
+
+      # Names the installer unambiguously, checksums it, and writes the
+      # machine-readable release manifest describing exactly THIS build.
+      # `testedFdraftVersion`/`testedFdraftCommit` stay null: this job never
+      # checks out or runs FDraft, so it cannot honestly claim that
+      # verification — it is filled in by the human clean-Windows pass
+      # recorded in docs/guides/RELEASE_CHECKLIST.md before publication.
+      - name: Package installer, SHA256SUMS.txt and release manifest
+        id: package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $appVersion = (node -p "require('./apps/studio/package.json').version")
+          $sdkVersion = (node -p "require('./packages/theme-sdk/package.json').version")
+          $rendererVersion = (node -p "require('./packages/theme-renderer/package.json').version")
+          # versions.ts is TypeScript, not JSON — read the constants directly.
+          $versionsSrc = Get-Content -Raw "packages/theme-sdk/src/schema/versions.ts"
+          $projectFormatVersion = [regex]::Match($versionsSrc, 'CURRENT_PROJECT_FORMAT_VERSION\s*=\s*"([^"]+)"').Groups[1].Value
+          $minProjectFormatVersion = [regex]::Match($versionsSrc, 'MIN_SUPPORTED_PROJECT_FORMAT_VERSION\s*=\s*"([^"]+)"').Groups[1].Value
+          $themeFormatVersion = [regex]::Match($versionsSrc, 'CURRENT_THEME_FORMAT_VERSION\s*=\s*"([^"]+)"').Groups[1].Value
+          $minThemeFormatVersion = [regex]::Match($versionsSrc, 'MIN_SUPPORTED_THEME_FORMAT_VERSION\s*=\s*"([^"]+)"').Groups[1].Value
+
+          $bundleDir = "apps/studio/src-tauri/target/release/bundle/nsis"
+          $installer = Get-ChildItem -Path $bundleDir -Filter "*.exe" | Select-Object -First 1
+          if (-not $installer) { throw "No NSIS .exe installer found under $bundleDir" }
+
+          $artifactName = "FDraft-Studio-$appVersion-Windows-x64-Setup.exe"
+          $outDir = "dist-release"
+          New-Item -ItemType Directory -Path $outDir -Force | Out-Null
+          $artifactPath = Join-Path $outDir $artifactName
+          Copy-Item $installer.FullName $artifactPath
+
+          $hash = (Get-FileHash -Path $artifactPath -Algorithm SHA256).Hash.ToLower()
+          $size = (Get-Item $artifactPath).Length
+          # sha256sum-compatible format, so `sha256sum -c SHA256SUMS.txt` and
+          # PowerShell's Get-FileHash both work for a downloader.
+          "$hash  $artifactName" | Out-File -FilePath (Join-Path $outDir "SHA256SUMS.txt") -Encoding ascii
+
+          $tag = if ($env:GITHUB_REF_TYPE -eq "tag") { $env:GITHUB_REF_NAME } else { $null }
+
+          $manifest = [ordered]@{
+            appVersion                       = $appVersion
+            tag                              = $tag
+            commitSha                        = "$env:GITHUB_SHA"
+            buildTarget                      = "windows"
+            architecture                     = "x64"
+            installerFormat                  = "nsis"
+            artifactFilename                 = $artifactName
+            fileSizeBytes                    = $size
+            sha256                           = $hash
+            themeSdkVersion                  = $sdkVersion
+            themeRendererVersion             = $rendererVersion
+            themeFormatVersion               = $themeFormatVersion
+            minSupportedThemeFormatVersion   = $minThemeFormatVersion
+            projectFormatVersion             = $projectFormatVersion
+            minSupportedProjectFormatVersion = $minProjectFormatVersion
+            # Minimum vs last-verified are genuinely different commits, so both
+            # are recorded rather than conflated. FDraft's own package version
+            # (1.2.0-beta.9) is identical at both, which is why the SHA is the
+            # real pin. Note the branch is unmerged in FDraft.
+            minCompatibleFdraftCommit        = "006035c"
+            minCompatibleFdraftVersion       = "1.2.0-beta.9"
+            minCompatibleFdraftNote          = "FDraft commit 006035c on the (unmerged) branch feature/fdraft-theme-runtime or later — the first FDraft commit whose theme runtime supports all 14 default-template component keys plus the behaviour and effects capabilities, pinned to theme-runtime-v0.1.0"
+            lastVerifiedFdraftCommit         = "bed5426"
+            # Filled in only by a human clean-Windows pass against a real
+            # Windows FDraft build; a CI runner cannot honestly claim it.
+            testedFdraftVersion              = $null
+            testedFdraftCommit               = $null
+            testedFdraftPlatform             = $null
+            signingStatus                    = "unsigned - no Authenticode code-signing certificate exists for this project"
+            buildTimestampUtc                = (Get-Date).ToUniversalTime().ToString("o")
+            workflowRunId                    = "$env:GITHUB_RUN_ID"
+            workflowRunAttempt               = "$env:GITHUB_RUN_ATTEMPT"
+            testedWindowsVersions            = @("windows-latest GitHub Actions runner (Windows Server 2022), x64")
+            tutorialContentRevision          = "$env:GITHUB_SHA"
+          }
+          $manifest | ConvertTo-Json -Depth 5 | Out-File -FilePath (Join-Path $outDir "release-manifest.json") -Encoding utf8
+
+          Write-Host "Installer: $artifactPath ($size bytes)"
+          Write-Host "SHA-256:   $hash"
+          Get-Content (Join-Path $outDir "release-manifest.json")
+
+          "artifact_name=$artifactName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "sha256=$hash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "app_version=$appVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      # The Windows release smoke suite: everything a headless runner can
+      # actually prove about the packaged application — silent install,
+      # registry/shortcut/file presence, a launch smoke check, silent
+      # uninstall, and that uninstall never removes user app-data.
+      #
+      # What this deliberately does NOT claim to prove: real SmartScreen
+      # dialog wording, visual Start Menu/taskbar icon rendering, and any
+      # human-driven GUI walkthrough (tutorial steps, canvas editing, export,
+      # FDraft interop). Those need a real interactive Windows session and are
+      # tracked as an explicit pre-publication gate in
+      # docs/guides/RELEASE_CHECKLIST.md, not silently implied as done here.
+      - name: Windows release smoke suite (install, launch, uninstall)
+        shell: pwsh
+        env:
+          ARTIFACT_NAME: ${{ steps.package.outputs.artifact_name }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $artifactPath = (Resolve-Path "dist-release/$env:ARTIFACT_NAME").Path
+          $appVersion = (node -p "require('./apps/studio/package.json').version")
+          $results = [ordered]@{}
+
+          function Check([string]$name, [bool]$condition) {
+            $script:results[$name] = $condition
+            if (-not $condition) { Write-Host "::error::Verification check failed: $name" }
+            else { Write-Host "OK: $name" }
+          }
+
+          function Find-UninstallEntry {
+            $roots = @(
+              "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
+              "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
+              "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+            )
+            Get-ItemProperty -Path $roots -ErrorAction SilentlyContinue |
+              Where-Object { $_.DisplayName -eq "FDraft Studio" } | Select-Object -First 1
+          }
+
+          # installMode is "currentUser" (tauri.conf.json): no elevation
+          # prompt, no admin rights, per-user install location.
+          $proc = Start-Process -FilePath $artifactPath -ArgumentList "/S" -PassThru -Wait
+          Check "silent install process exits 0" ($proc.ExitCode -eq 0)
+
+          # NSIS's outer stub can return before the real install work (registry
+          # writes, shortcut creation) is committed — poll rather than trusting
+          # a single immediate read.
+          $entry = $null
+          for ($i = 0; $i -lt 10 -and -not $entry; $i++) {
+            $entry = Find-UninstallEntry
+            if (-not $entry) { Start-Sleep -Seconds 1 }
+          }
+          Check "uninstall registry entry created" ($null -ne $entry)
+
+          $installLocation = $null
+          $exePath = $null
+          if ($entry) {
+            Check "registry DisplayVersion matches app version ($appVersion)" ($entry.DisplayVersion -eq $appVersion)
+            Check "registry Publisher identifies Studio, not FDraft" ($entry.Publisher -eq "FDraft Studio")
+            # NSIS's InstallLocation value can come back wrapped in literal
+            # double quotes; Join-Path misparses a leading `"` as a drive
+            # designator ("Cannot find drive '\"C'"), so strip it first.
+            $installLocation = if ($entry.InstallLocation) { $entry.InstallLocation.Trim('"') } else { $null }
+            Check "InstallLocation reported in registry" (![string]::IsNullOrWhiteSpace($installLocation))
+            if ($installLocation) {
+              $exePath = Join-Path $installLocation "fdraft-studio.exe"
+              Check "installed executable exists at InstallLocation" (Test-Path $exePath)
+            }
+          }
+
+          # currentUser install => per-user Start Menu, not the All Users one.
+          $startMenuDir = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs"
+          $shortcut = Get-ChildItem -Path $startMenuDir -Filter "FDraft Studio*.lnk" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          Check "Start Menu shortcut created" ($null -ne $shortcut)
+
+          if ($exePath -and (Test-Path $exePath)) {
+            $appProc = Start-Process -FilePath $exePath -PassThru
+            Start-Sleep -Seconds 10
+            $stillRunning = -not $appProc.HasExited
+            Check "installed app launches and stays running 10s (no immediate crash)" $stillRunning
+            if ($stillRunning) { Stop-Process -Id $appProc.Id -Force -ErrorAction SilentlyContinue }
+          } else {
+            Check "installed app launches and stays running 10s (no immediate crash)" $false
+          }
+
+          # --- Upgrade / repair: run the same installer again over the existing
+          # install. A user updating in place does exactly this, and it must not
+          # produce a second Programs-and-Features entry, a second Start Menu
+          # shortcut, or lose the user's own files. (Same-version reinstall is
+          # the repair path; a true cross-version upgrade additionally needs a
+          # previous release to install first, which does not exist yet for
+          # 0.1.0 — noted honestly rather than implied.)
+          $userFileMarker = $null
+          if ($installLocation) {
+            $userFileMarker = Join-Path $installLocation "user-data-preservation-probe.txt"
+            "written before reinstall" | Out-File -FilePath $userFileMarker -Encoding ascii
+          }
+          $reinstall = Start-Process -FilePath $artifactPath -ArgumentList "/S" -PassThru -Wait
+          Check "reinstall over an existing install exits 0 (upgrade/repair path)" ($reinstall.ExitCode -eq 0)
+          Start-Sleep -Seconds 3
+
+          $entriesAfterReinstall = @(
+            Get-ItemProperty -Path @(
+              "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
+              "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
+              "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+            ) -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq "FDraft Studio" }
+          )
+          Check "reinstall leaves exactly one uninstall entry (no duplicate)" ($entriesAfterReinstall.Count -eq 1)
+          $shortcutsAfterReinstall = @(Get-ChildItem -Path $startMenuDir -Filter "FDraft Studio*.lnk" -Recurse -ErrorAction SilentlyContinue)
+          Check "reinstall leaves exactly one Start Menu shortcut (no duplicate)" ($shortcutsAfterReinstall.Count -eq 1)
+          Check "installed executable still present after reinstall" (($null -ne $exePath) -and (Test-Path $exePath))
+          if ($userFileMarker) {
+            Check "a user file inside the install folder survives reinstall" (Test-Path $userFileMarker)
+          }
+
+          # Studio's own app-data namespace (identifier com.fdraftstudio.app),
+          # never FDraft's separate com.burrichen.fdraft. A passive launch with
+          # no UI interaction may never write anything here at all — nothing on
+          # the Rust side creates it eagerly and the frontend only does on a
+          # real user action — so its presence is recorded, not asserted. The
+          # assertable requirement is that uninstall never deletes it.
+          $studioAppData = "$env:APPDATA\com.fdraftstudio.app"
+          # Write a real marker so "uninstall preserves user data" is proven
+          # against a file that definitely exists, not merely against a
+          # directory the app may never have created on its own.
+          New-Item -ItemType Directory -Path $studioAppData -Force | Out-Null
+          $appDataMarker = Join-Path $studioAppData "user-data-preservation-probe.json"
+          '{"probe":"must survive uninstall"}' | Out-File -FilePath $appDataMarker -Encoding utf8
+          Start-Sleep -Seconds 2
+          $appDataExistedBeforeUninstall = Test-Path $studioAppData
+          Write-Host "Studio app-data directory ($studioAppData) present before uninstall: $appDataExistedBeforeUninstall"
+
+          if ($entry -and $entry.UninstallString) {
+            $uninstallExe = ($entry.UninstallString -replace '^"([^"]+)".*$', '$1')
+            $uninstallProc = Start-Process -FilePath $uninstallExe -ArgumentList "/S" -PassThru -Wait
+            Check "silent uninstall process exits 0" ($uninstallProc.ExitCode -eq 0)
+
+            $entryAfter = $null
+            for ($i = 0; $i -lt 10; $i++) {
+              $entryAfter = Find-UninstallEntry
+              if (-not $entryAfter) { break }
+              Start-Sleep -Seconds 1
+            }
+            Check "uninstall registry entry removed" ($null -eq $entryAfter)
+            Check "installed executable removed after uninstall" (-not (Test-Path $exePath))
+            $shortcutAfter = Get-ChildItem -Path $startMenuDir -Filter "FDraft Studio*.lnk" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            Check "Start Menu shortcut removed after uninstall" ($null -eq $shortcutAfter)
+          } else {
+            Check "uninstall registry entry had an UninstallString to run" $false
+          }
+
+          # This project's pinned @tauri-apps/cli (2.11.4) NsisConfig schema has
+          # no delete-app-data-on-uninstall option at all (confirmed by reading
+          # its own config.schema.json, not assumed from docs), so nothing could
+          # enable this even by mistake. Proven here against a real file.
+          Check "app-data directory survives uninstall" (Test-Path $studioAppData)
+          Check "a real user-data file in app-data survives uninstall" (Test-Path $appDataMarker)
+
+          $results | ConvertTo-Json | Out-File -FilePath "dist-release/windows-smoke-suite.json" -Encoding utf8
+          Get-Content "dist-release/windows-smoke-suite.json"
+
+          if ($results.Values -contains $false) {
+            Write-Host "::error::One or more Windows release smoke-suite checks failed — nothing will be published."
+            exit 1
+          }
+
+      # Uploaded even on failure so a failed smoke run is diagnosable, but the
+      # publish job below never runs unless every preceding step succeeded, so
+      # a partial build can't reach a Release. Contains only the installer,
+      # checksums, manifest and smoke results — no logs with local paths, no
+      # secrets, no fixtures, no caches.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: fdraft-studio-windows-${{ steps.package.outputs.app_version }}
+          path: dist-release/
+          retention-days: 30
+          if-no-files-found: error
+
+  publish:
+    name: Publish the GitHub Release (tag pushes only)
+    needs: build-windows
+    # A manual workflow_dispatch run has no tag ref, so it can never publish —
+    # it stops after build-windows with artifacts attached to the run.
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # the single narrowest permission needed to create a Release
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: fdraft-studio-windows-${{ needs.build-windows.outputs.app_version }}
+          path: dist-release
+
+      # Proves the bytes about to be published are byte-identical to the ones
+      # the smoke suite just tested — not merely "a build from the same commit".
+      - name: Re-verify the artifact checksum before publishing
         shell: bash
         run: |
-          TAG_VERSION="${GITHUB_REF_NAME#studio-v}"
-          PKG_VERSION=$(node -p "require('./apps/studio/package.json').version")
-          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match apps/studio/package.json version $PKG_VERSION — bump the version and commit before tagging."
+          set -euo pipefail
+          cd dist-release
+          sha256sum -c SHA256SUMS.txt
+          ACTUAL=$(sha256sum "${{ needs.build-windows.outputs.artifact_name }}" | cut -d' ' -f1)
+          if [ "$ACTUAL" != "${{ needs.build-windows.outputs.sha256 }}" ]; then
+            echo "::error::Checksum of the downloaded artifact does not match the tested build."
+            exit 1
+          fi
+          MANIFEST_SHA=$(node -p "require('./release-manifest.json').sha256")
+          MANIFEST_TAG=$(node -p "require('./release-manifest.json').tag")
+          MANIFEST_COMMIT=$(node -p "require('./release-manifest.json').commitSha")
+          if [ "$MANIFEST_SHA" != "$ACTUAL" ] || [ "$MANIFEST_TAG" != "$GITHUB_REF_NAME" ] || [ "$MANIFEST_COMMIT" != "$GITHUB_SHA" ]; then
+            echo "::error::release-manifest.json does not describe this exact artifact/tag/commit."
+            exit 1
+          fi
+          echo "Verified: $ACTUAL, tag $MANIFEST_TAG, commit $MANIFEST_COMMIT"
+
+      # Never silently replace a published Release.
+      - name: Refuse to overwrite an existing Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::A GitHub Release already exists for $GITHUB_REF_NAME. Cut a new patch tag instead of overwriting it."
             exit 1
           fi
 
-      # The same gate CI runs for every push/PR (see ci.yml's studio-frontend
-      # job) — theme-sdk/theme-renderer built first since Studio consumes
-      # their workspace-linked `dist/` output, not their source.
-      - run: pnpm run check:architecture
-      - run: pnpm run check:boundaries
-      - run: pnpm run lint
-      - run: pnpm --filter @fdraft/theme-sdk typecheck
-      - run: pnpm --filter @fdraft/theme-sdk test
-      - run: pnpm --filter @fdraft/theme-sdk build
-      - run: pnpm --filter @fdraft/theme-renderer typecheck
-      - run: pnpm --filter @fdraft/theme-renderer test
-      - run: pnpm --filter @fdraft/theme-renderer build
-      - run: pnpm --filter @fdraft/studio typecheck
-      - run: pnpm --filter @fdraft/studio test
-
-      - name: Determine prerelease flag from the tag's semver suffix
-        id: prerelease-check
-        shell: bash
-        run: |
-          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
-            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - uses: tauri-apps/tauri-action@v0
+      # Pre-release, deliberately: the installer is unsigned (no Authenticode
+      # certificate exists for this project) and this is Studio's first public
+      # Windows build. `--prerelease` also stops it being marked "Latest".
+      - name: Create the GitHub Release and upload assets
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          projectPath: apps/studio
-          tagName: ${{ github.ref_name }}
-          releaseName: "FDraft Studio ${{ github.ref_name }}"
-          releaseBody: |
-            Windows installer for FDraft Studio ${{ github.ref_name }}.
-
-            **Not code-signed** — no Windows publisher/Authenticode certificate is
-            available for this project. Windows SmartScreen will show an
-            unsigned-publisher warning on first run; this is expected, not an error.
-            See docs/guides/RELEASE_CHECKLIST.md for the full release procedure.
-          releaseDraft: true
-          prerelease: ${{ steps.prerelease-check.outputs.is_prerelease }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "FDraft Studio ${{ needs.build-windows.outputs.app_version }} (Windows, beta)" \
+            --notes-file docs/releases/STUDIO_RELEASE_NOTES.md \
+            --prerelease \
+            --verify-tag \
+            "dist-release/${{ needs.build-windows.outputs.artifact_name }}" \
+            "dist-release/SHA256SUMS.txt" \
+            "dist-release/release-manifest.json"
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json url --jq '"Published: \(.url)"'

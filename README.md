@@ -11,6 +11,28 @@ This repository owns:
 
 The existing FDraft application remains in its own repository. It consumes exact released versions of the SDK and renderer, supplies real component adapters and event data, and falls back safely when a theme is invalid.
 
+## Download
+
+FDraft Studio is **Windows-only**. There is no macOS or Linux build.
+
+Get the installer from the [**Releases page**](https://github.com/Burrichen/FDraft-Studio/releases) — that is the canonical download location:
+
+```
+FDraft-Studio-<version>-Windows-x64-Setup.exe
+```
+
+| | |
+| --- | --- |
+| Supported Windows | Windows 10 (1803 or later) and Windows 11 |
+| Architecture | **x64 only** — no 32-bit or Arm64 build |
+| Code signing | **Not signed.** SmartScreen will warn about an unknown publisher on first run; verify the SHA-256 checksum in `SHA256SUMS.txt` instead. Never disable Windows Security to install it |
+| Administrator rights | Not required — installs per-user |
+| Automatic updates | None. Download newer versions from the Releases page |
+| Your projects | Saved as single `.fdstudio` files wherever *you* choose, never inside the install folder. Uninstalling does not delete them |
+| Tutorial | Built in and fully offline — the **Help** button, any time |
+
+Full details, checksum verification, backup guidance, and uninstall steps: **[Windows installation guide](docs/guides/WINDOWS_INSTALL.md)**. Problems: [Troubleshooting](docs/guides/TROUBLESHOOTING.md), then [open an issue](https://github.com/Burrichen/FDraft-Studio/issues) — Studio's diagnostics exclude your project content by default.
+
 ## Start here
 
 1. Read [CLAUDE.md](CLAUDE.md).

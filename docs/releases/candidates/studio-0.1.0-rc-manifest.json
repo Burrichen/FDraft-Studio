@@ -1,0 +1,25 @@
+{
+  "appVersion": "0.1.0",
+  "sourceCommitSha": "dfc893e2d193e53fd87a0f112180dcc790b10ac7",
+  "windowsTarget": "x64",
+  "cpuArchitecture": "x64",
+  "installerFormat": "nsis",
+  "installerFilename": "FDraft-Studio-0.1.0-Windows-x64-Setup.exe",
+  "fileSizeBytes": 2364401,
+  "sha256": "5dbcf4b7c301d6fc56d6221a07b97976ad38030d6880c5cd4720504011c17420",
+  "sdkVersion": "0.1.0",
+  "rendererVersion": "0.1.0",
+  "themeFormatVersion": "1.0.0",
+  "projectFormatVersion": "1.0.0",
+  "minSupportedProjectFormatVersion": "0.9.0",
+  "minCompatibleFdraftRef": "commit 006035c on branch feature/fdraft-theme-runtime (first FDraft commit supporting all 14 default-template component keys plus the behaviour/effects capabilities) or later, pinned to theme-runtime-v0.1.0",
+  "testedFdraftVersion": null,
+  "testedFdraftCommit": null,
+  "signingStatus": "unsigned — no Authenticode certificate available for this project",
+  "buildTimestampUtc": "2026-09-03T17:58:09.5686190Z",
+  "testedWindowsVersions": [
+    "windows-latest GitHub Actions runner (Windows Server 2022) — no additional Windows version tested yet"
+  ],
+  "tutorialVersion": "1",
+  "tutorialContentRevision": "dfc893e2d193e53fd87a0f112180dcc790b10ac7"
+}
