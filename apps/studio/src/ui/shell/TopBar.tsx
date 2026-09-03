@@ -25,6 +25,7 @@ export interface TopBarProps {
   onOpenDevPreview: () => void;
   onOpenLinkFDraft: () => void;
   onOpenPublishToFDraft: () => void;
+  onOpenTutorial: () => void;
 }
 
 const MODES: { id: StudioMode; label: string }[] = [
@@ -98,6 +99,12 @@ export function TopBar(props: TopBarProps): React.ReactNode {
           Close
         </button>
       </div>
+
+      <nav className="top-bar-group" aria-label="Help">
+        <button type="button" onClick={props.onOpenTutorial} aria-label="Help menu — open tutorial">
+          Help
+        </button>
+      </nav>
     </header>
   );
 }

@@ -61,14 +61,56 @@ identical compatibility check as step B.5 automatically, stages a diff, and requ
 explicit confirmation before writing anything. Manual file copying bypasses all of this and
 is not the supported path.
 
-**Real evidence this actually works end to end** (Prompt 13, official event starter
-projects — see `docs/IMPLEMENTATION_STATUS.md` row 13 for full detail):
+**Real evidence this actually works end to end** — updated as of the redo-dogfooding pass
+against FDraft's now-complete compatibility contract (`docs/IMPLEMENTATION_STATUS.md` row 15;
+superseding row 13's earlier, honest partial-compatibility snapshot):
 
 | Event | Compatible today? | Real publish outcome |
 | --- | --- | --- |
-| Christmas | Yes (7 supported component keys only, no unsupported capability) | **Published for real** into `theme-projects/christmas/` + `src/theme-packs/christmas/theme.fdtheme`; confirmed rendering in FDraft's real dev-preview route against a real running `next dev` server |
-| Halloween | No | Correctly **blocked**: unsupported component keys (7 of 14 the default template places) + the `behaviour` capability its Candy Bowl needs; FDraft's real dev-preview route shows the incompatible-theme message cleanly, zero console errors |
-| January | No | Correctly **blocked**: the `effects` capability its rain/clouds/fog needs (only reason — its page structure uses the same 7 supported keys as Christmas); same clean dev-preview fallback |
+| Halloween | Yes — all 14 default-template component keys + `behaviour` | **Published for real** into `theme-projects/halloween/` + `src/theme-packs/halloween/theme.fdtheme`; Candy Bowl confirmed changing state at exact progress boundaries against FDraft's real dev-preview route |
+| Christmas | Yes — migrated off its temporary 7-key structure onto the full 14-key template | **Published for real** into `theme-projects/christmas/` + `src/theme-packs/christmas/theme.fdtheme`, same visual appearance preserved |
+| January | Yes — all 14 keys + `effects` | **Published for real** into `theme-projects/f-you-it-s-january/` + `src/theme-packs/f-you-it-s-january/theme.fdtheme`; real rain/clouds/fog confirmed present at high performance tier and correctly absent at low tier |
+
+All three: zero console errors against a real running FDraft `next dev` server, no
+compatibility exceptions, no reduced/custom structure.
+
+## F. Studio release-candidate readiness (unchanged behaviour + built-in tutorial)
+
+Preparing a release-candidate *source state* — not cutting a tag, packaging an installer, or
+publishing a release; see `docs/IMPLEMENTATION_STATUS.md`'s tutorial/release-candidate row for
+the full evidence this section summarizes.
+
+- [ ] Working tree is the exact committed, tested result of the official-event redo-dogfooding
+      pass (row 15) plus the tutorial addition (row 16) — no unexplained changes.
+- [ ] Application version (`apps/studio/package.json`, `src-tauri/tauri.conf.json`,
+      `src-tauri/Cargo.toml`) is identical across all three files.
+- [ ] `@fdraft/theme-sdk`/`@fdraft/theme-renderer` versions, and the theme-format/
+      project-format versions they declare, are recorded accurately and unchanged from the
+      already-released `theme-runtime-v0.1.0` — no shared-package change was needed for either
+      the compatibility-gap closure or the tutorial.
+- [ ] The committed lockfile (`pnpm-lock.yaml`) contains no `file:`/`link:` override pointing
+      outside this workspace, and no floating/`latest` version for `@fdraft/theme-sdk`/
+      `@fdraft/theme-renderer` (both stay pinned to the released tarball via `workspace:*`
+      inside this monorepo — resolved to exact versions only when actually packed for release).
+- [ ] All three official event projects (Halloween, Christmas, January) still compile,
+      publish (against a synthetic, real-shaped FDraft fixture — see
+      `test/starterEvents/simulationCoverage.test.tsx`), and render — a blocked publish fails
+      the test suite, not merely a documented gap.
+- [ ] The complete verification matrix (formatting/lint/typecheck/architecture/boundaries/
+      SDK/renderer/Studio/tutorial/schema/migration/package-round-trip/renderer-parity/
+      official-event/security/archive+SVG-safety/save-recovery/accessibility/Windows-path/
+      performance/memory-leak) passes clean — see the tutorial/release-candidate
+      `IMPLEMENTATION_STATUS.md` row for the exact commands and counts.
+- [ ] Built-in tutorial: every step manually cross-checked against real, current UI labels
+      (not aspirational ones); automated coverage for first-run, skip, completion persistence,
+      restart, Back/Next, close/reopen, keyboard-only operation, visible focus, no timer-driven
+      motion, small-window rendering, unsaved-work/project-state preservation, missing-asset
+      resilience, and offline availability (no `fetch` ever called) all pass.
+- [ ] No Studio source code appears in FDraft's real production bundle (re-confirmed unchanged
+      from Prompt 12 — nothing in this phase touches FDraft). No FDraft application code is
+      copied into Studio (the tutorial describes FDraft's real behaviour in its own words; it
+      does not import or embed any FDraft source).
+- [ ] No Git tag, GitHub Release, or installer was created by this phase.
 
 ## D. Rolling back
 

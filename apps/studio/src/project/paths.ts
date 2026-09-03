@@ -10,6 +10,8 @@ export interface StudioPaths {
   /** Studio's own config (recent-projects list, window prefs) — never project content. */
   appConfigDir: string;
   recentProjectsFile: string;
+  /** Local-only "has this profile seen/finished the built-in tutorial" state — never project content, never synced anywhere. */
+  tutorialStateFile: string;
 }
 
 export async function resolveStudioPaths(platform: FilePlatform): Promise<StudioPaths> {
@@ -21,6 +23,7 @@ export async function resolveStudioPaths(platform: FilePlatform): Promise<Studio
     snapshotsDir: platform.join(appDataDir, "snapshots"),
     appConfigDir,
     recentProjectsFile: platform.join(appConfigDir, "recent-projects.json"),
+    tutorialStateFile: platform.join(appConfigDir, "tutorial-state.json"),
   };
 }
 

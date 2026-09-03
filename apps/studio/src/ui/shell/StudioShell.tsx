@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ThemeRenderer, type HostSettings } from "@fdraft/theme-renderer";
 import { useAppContext } from "../../AppContext.js";
+import { useTutorial } from "../../tutorial/TutorialContext.js";
 import { useProjectSessionState } from "../../project/useProjectSession.js";
 import { isMissingPathError } from "../../project/projectSession.js";
 import { createBlobAssetResolver } from "../../project/assetBlobResolver.js";
@@ -46,6 +47,7 @@ function renderableTarget(target: ShellTarget | undefined, project: { pages: { i
 
 export function StudioShell(): React.ReactNode {
   const { platform, session } = useAppContext();
+  const tutorial = useTutorial();
   const state = useProjectSessionState(session);
   const open = state.open;
 
@@ -280,6 +282,7 @@ export function StudioShell(): React.ReactNode {
         onOpenDevPreview={() => setDevPreviewOpen(true)}
         onOpenLinkFDraft={() => setLinkFDraftOpen(true)}
         onOpenPublishToFDraft={() => setPublishOpen(true)}
+        onOpenTutorial={() => tutorial.open()}
       />
       <div className="shell-body">
         {mode === "assets" ? (

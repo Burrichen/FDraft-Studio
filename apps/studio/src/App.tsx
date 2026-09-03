@@ -6,6 +6,8 @@ import { AppProvider, type AppContextValue } from "./AppContext.js";
 import { useProjectSessionState } from "./project/useProjectSession.js";
 import { StartupScreen } from "./ui/startup/StartupScreen.js";
 import { StudioShell } from "./ui/shell/StudioShell.js";
+import { TutorialProvider } from "./tutorial/TutorialContext.js";
+import { TutorialPanel } from "./ui/tutorial/TutorialPanel.js";
 
 const SDK_VERSION = "0.1.0";
 const AUTOSAVE_INTERVAL_MS = 30_000;
@@ -24,7 +26,10 @@ function AppShell({ context }: { context: AppContextValue }): React.ReactNode {
 
   return (
     <AppProvider value={context}>
-      {state.status === "ready" ? <StudioShell /> : <StartupScreen />}
+      <TutorialProvider>
+        {state.status === "ready" ? <StudioShell /> : <StartupScreen />}
+        <TutorialPanel />
+      </TutorialProvider>
     </AppProvider>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAppContext } from "../../AppContext.js";
+import { useTutorial } from "../../tutorial/TutorialContext.js";
 import { useProjectSessionState } from "../../project/useProjectSession.js";
 import { loadRecentProjects, recordRecentProject, removeRecentProject, checkRecentProjectPaths, type RecentProjectStatus } from "../../recent/recentProjects.js";
 import { listRecoveryCandidates, loadRecoveryPayload, discardRecovery, type RecoveryRecord } from "../../recovery/recovery.js";
@@ -10,6 +11,7 @@ type LoadState<T> = { status: "loading" } | { status: "ready"; value: T } | { st
 
 export function StartupScreen(): React.ReactNode {
   const { platform, paths, session } = useAppContext();
+  const tutorial = useTutorial();
   const sessionState = useProjectSessionState(session);
 
   const [recent, setRecent] = useState<LoadState<RecentProjectStatus[]>>({ status: "loading" });
@@ -131,6 +133,9 @@ export function StartupScreen(): React.ReactNode {
       <header className="startup-header">
         <h1>FDraft Studio</h1>
         <p>Design FDraft themes and event pages without writing code.</p>
+        <button type="button" onClick={() => tutorial.open()} aria-label="Help menu — open tutorial">
+          Help: Tutorial
+        </button>
       </header>
 
       {(localError || sessionState.status === "error") && (
