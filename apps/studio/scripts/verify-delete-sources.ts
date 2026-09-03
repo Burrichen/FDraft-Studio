@@ -17,7 +17,8 @@
  * Run: pnpm --filter @fdraft/studio exec tsx scripts/verify-delete-sources.ts <scratchDir> [halloween|christmas]
  */
 import { cp, rm, mkdir } from "node:fs/promises";
-import { join } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { createNodeTestPlatform } from "../test/helpers/nodePlatform.js";
@@ -29,6 +30,12 @@ const execFileAsync = promisify(execFile);
 // Resolved relative to this script, per CLAUDE.md's documented sibling-checkout layout
 // (`../FDraft` next to this repository) — never a machine-specific absolute path.
 const STUDIO_ROOT = join(import.meta.dirname, "..");
+
+// See the identical comment in test/starterEvents/simulationCoverage.test.tsx —
+// pnpm's Windows .bin shims aren't directly spawnable by execFile's default
+// no-shell CreateProcess call; running tsx's real entry point through the
+// current Node binary is portable and shell-free on every platform.
+const tsxCliPath = join(dirname(createRequire(import.meta.url).resolve("tsx/package.json")), "dist/cli.mjs");
 
 async function main(): Promise<void> {
   const scratchDir = process.argv[2];
@@ -46,7 +53,7 @@ async function main(): Promise<void> {
   await cp(realAssetDir, sourceCopyDir, { recursive: true });
 
   console.log(`Building ${slug} from the scratch copy (no publish — this is an isolated proof, not a re-publish)...`);
-  await execFileAsync("node_modules/.bin/tsx", [`scripts/build-${slug}.ts`, workDir, "", sourceCopyDir], {
+  await execFileAsync(process.execPath, [tsxCliPath, `scripts/build-${slug}.ts`, workDir, "", sourceCopyDir], {
     cwd: STUDIO_ROOT,
   });
 

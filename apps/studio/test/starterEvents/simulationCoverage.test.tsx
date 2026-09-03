@@ -22,8 +22,9 @@
  */
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { render } from "@testing-library/react";
@@ -36,6 +37,14 @@ import { createNodeTestPlatform } from "../helpers/nodePlatform.js";
 
 const execFileAsync = promisify(execFile);
 const STUDIO_ROOT = join(import.meta.dirname, "../..");
+
+// pnpm's Windows .bin shims (tsx.CMD/tsx.ps1) aren't directly spawnable by
+// execFile's default no-shell CreateProcess call the way the POSIX
+// extensionless `tsx` shim is — resolving tsx's own real entry point and
+// running it through the current Node binary works identically on every
+// platform, with no shell/PATHEXT involved (also sidesteps any shell-
+// quoting risk for a work directory path that happens to contain spaces).
+const tsxCliPath = join(dirname(createRequire(import.meta.url).resolve("tsx/package.json")), "dist/cli.mjs");
 
 const VIEWPORTS = [
   { name: "mobile", widthPx: 390 },
@@ -112,7 +121,7 @@ beforeAll(async () => {
   for (const slug of EVENTS) {
     const eventWorkDir = join(workDir, slug);
     await mkdir(eventWorkDir, { recursive: true });
-    const { stdout } = await execFileAsync("node_modules/.bin/tsx", [`scripts/build-${slug}.ts`, eventWorkDir, fdraftFixtureRepo], { cwd: STUDIO_ROOT });
+    const { stdout } = await execFileAsync(process.execPath, [tsxCliPath, `scripts/build-${slug}.ts`, eventWorkDir, fdraftFixtureRepo], { cwd: STUDIO_ROOT });
     builtSlugs[slug] = { fdstudioPath: join(eventWorkDir, `${slug}.fdstudio`), fdthemePath: join(eventWorkDir, `${slug}.fdtheme`), publishStdout: stdout };
   }
 }, 120_000);
