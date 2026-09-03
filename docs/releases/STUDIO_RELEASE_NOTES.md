@@ -7,6 +7,40 @@ editing React, CSS, or FDraft application code.
 **This is a pre-release.** The installer is not code-signed, and this is
 Studio's first public compatibility trial against FDraft.
 
+## Verification status — read this before you rely on it
+
+Being straight about what has and has not been checked, because "the build is
+green" and "a person has used this" are different claims.
+
+**Verified automatically, on a real Windows x64 runner, for this exact
+installer:** silent install with no administrator prompt; correct product name,
+version and publisher in the registry; Start Menu shortcut created; **the
+installed application launches and keeps running**; reinstall over an existing
+install (no duplicate entries or shortcuts, files preserved); silent uninstall
+removing the executable, registry entry and shortcut; and user data surviving
+uninstall, proven against real files. Plus the full test suite — 806 tests
+across the SDK, renderer and Studio — run on Windows, and the installer's
+SHA-256 re-verified after download.
+
+**Not yet verified: a human using the packaged application.** Nobody has yet
+walked the tutorial, drawn on the canvas, imported an image, saved and reopened
+a project, or exported a theme *from an installed copy on a real Windows
+desktop*. Those features are covered by automated tests and were developed
+against a running app, but the packaged Windows GUI itself has had a launch
+smoke check and nothing more. High-DPI scaling, font metrics, native file
+dialogs and clipboard behaviour are the likeliest places for something to be
+wrong.
+
+**Also not verified:** rendering an exported theme in a Windows FDraft build —
+no Windows FDraft build exists yet. Theme rendering *was* verified against a
+real running FDraft server (all three official events, zero console errors),
+and FDraft renders through the same shared renderer package on every platform,
+so the risk is low — but it is not the same as having done it on Windows.
+
+That's what "beta" means here. If something is broken, please
+[open an issue](https://github.com/Burrichen/FDraft-Studio/issues) — that is
+genuinely useful, and it is the gap this release is asking you to help close.
+
 ## What this is (and what it isn't)
 
 Studio edits **visual theme data only** — pages, pop-ups, master layers,

@@ -229,7 +229,11 @@ built and smoke-tested by *the same run*, re-verifies its SHA-256, and confirms
 4. Verify the *published* download by repeating the post-publication steps below. A green
    Actions run is not by itself proof that the published release works.
 
-- [ ] **Outstanding gate — human clean-Windows verification.** Follow
+- [~] **Human clean-Windows verification — consciously deferred, not done.** The owner's
+      decision was to publish 0.1.0 as a labelled pre-release on automated verification
+      alone, and the release notes state plainly what has and has not been checked. This
+      remains outstanding work, not a closed item: it is the gate for promoting anything to
+      a *stable* channel. Follow
       `docs/guides/WINDOWS_VERIFICATION_PASS.md`, an ordered ~40-minute pass with a result
       block to fill in at the end. Machine verification
       (install/launch/uninstall/reinstall, checksums, the full test matrix on Windows) is
