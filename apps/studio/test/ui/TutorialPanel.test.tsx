@@ -194,8 +194,15 @@ describe("Tutorial", () => {
       const context = await freshContext(dir);
       await openFreshTutorial(context);
       const dialog = screen.getByRole("dialog", { name: "FDraft Studio Tutorial" });
-      expect(dialog.contains(document.activeElement)).toBe(true);
-      expect(document.activeElement?.tagName).toBe("BUTTON");
+      // useModalA11y's focus-on-mount runs in its own effect, one tick after
+      // the dialog element itself lands in the DOM (what openFreshTutorial's
+      // own waitFor confirms) — poll rather than assume both commit together,
+      // a real race a slower/differently-scheduled CI runner can expose even
+      // when it never does locally.
+      await waitFor(() => {
+        expect(dialog.contains(document.activeElement)).toBe(true);
+        expect(document.activeElement?.tagName).toBe("BUTTON");
+      });
     });
   });
 

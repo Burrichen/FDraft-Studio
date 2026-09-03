@@ -30,10 +30,16 @@ function hostSeparator(): "\\" | "/" {
 }
 
 function detectSeparator(path: string): "\\" | "/" {
-  // A drive letter or any backslash unambiguously implies Windows-style;
-  // otherwise fall back to whatever the running host actually uses, not a
-  // hardcoded assumption.
-  return /^[a-zA-Z]:/.test(path) || path.includes("\\") ? "\\" : hostSeparator();
+  // A drive letter, a UNC prefix, or any backslash unambiguously implies
+  // Windows-style; a leading "/" unambiguously implies POSIX (real Windows
+  // paths never start that way) — both cases keep a path's own, already-
+  // evident style regardless of host, e.g. a project saved on macOS and
+  // later opened on Windows. Only a genuinely ambiguous bare fragment (no
+  // separator hint at all, e.g. the literal string "theme-projects") falls
+  // back to the running host's own separator.
+  if (/^[a-zA-Z]:/.test(path) || path.includes("\\")) return "\\";
+  if (path.startsWith("/")) return "/";
+  return hostSeparator();
 }
 
 /** Splits off a leading drive letter ("C:\") / UNC root ("\\\\") / POSIX root ("/"), returning it plus the remainder. */
