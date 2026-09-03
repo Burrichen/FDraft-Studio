@@ -12,7 +12,13 @@ import { clearSelection, pruneSelection, type Selection } from "../../editor/sel
 import { Canvas } from "../canvas/Canvas.js";
 import { AssetWorkspace } from "../assets/AssetWorkspace.js";
 import { BehaviourWorkspace } from "../behaviour/BehaviourWorkspace.js";
+import { SimulateWorkspace } from "../simulation/SimulateWorkspace.js";
 import { ValidationPanel } from "./ValidationPanel.js";
+import { CopyReviewPanel } from "../copy/CopyReviewPanel.js";
+import { DevPreviewPanel } from "../devPreview/DevPreviewPanel.js";
+import { LinkFDraftRepositoryDialog } from "../publish/LinkFDraftRepositoryDialog.js";
+import { PublishToFDraftPanel } from "../publish/PublishToFDraftPanel.js";
+import { VIEWPORT_PROFILES } from "../viewportProfiles.js";
 import { PerformanceInspectorPanel } from "./PerformanceInspectorPanel.js";
 import { TopBar, type StudioMode } from "./TopBar.js";
 import { LeftPanel, type ShellTarget } from "./LeftPanel.js";
@@ -49,6 +55,12 @@ export function StudioShell(): React.ReactNode {
   const [focusMode, setFocusMode] = useState(false);
   const [validationOpen, setValidationOpen] = useState(false);
   const [performanceOpen, setPerformanceOpen] = useState(false);
+  const [copyReviewOpen, setCopyReviewOpen] = useState(false);
+  const [previewViewportIndex, setPreviewViewportIndex] = useState(0);
+  const [devPreviewOpen, setDevPreviewOpen] = useState(false);
+  const [linkFDraftOpen, setLinkFDraftOpen] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [publishKey, setPublishKey] = useState(0);
   const [zoomPercent, setZoomPercent] = useState(100);
   const [target, setTarget] = useState<ShellTarget | undefined>(undefined);
   const [rawSelection, setRawSelection] = useState<Selection>(clearSelection());
@@ -87,6 +99,13 @@ export function StudioShell(): React.ReactNode {
     setRawSelection(nextSelection);
     setMode("design");
     setValidationOpen(false);
+  }
+
+  function handleCopyReviewNavigate(next: ShellTarget, nextSelection: Selection): void {
+    setTarget(next);
+    setRawSelection(nextSelection);
+    setMode("design");
+    setCopyReviewOpen(false);
   }
 
   const resolver = useMemo(() => createBlobAssetResolver(open ?? null), [open]);
@@ -148,25 +167,42 @@ export function StudioShell(): React.ReactNode {
   const previewableTarget = renderableTarget(effectiveTarget, project);
 
   if (mode === "preview") {
+    const previewViewport = VIEWPORT_PROFILES[previewViewportIndex]!;
+    function cycleViewport(direction: -1 | 1): void {
+      setPreviewViewportIndex((i) => (i + direction + VIEWPORT_PROFILES.length) % VIEWPORT_PROFILES.length);
+    }
     return (
       <div className="shell shell-preview">
-        {/* A plain div, not <header> — this is a minimal exit affordance, not the page's banner landmark (the real one is Design/Behaviour mode's TopBar, entirely absent here). */}
+        {/* A plain div, not <header> — this is a minimal exit affordance, not the page's banner landmark (the real one is Design/Behaviour mode's TopBar, entirely absent here). No editor overlay, selection marker, or mock control lives inside `shell-center-preview` below — everything interactive stays up here in the bar. */}
         <div className="preview-bar">
           <span>{project.metadata.name} — Preview</span>
+          <div className="preview-viewport-cycler" role="group" aria-label="Viewport profile">
+            <button type="button" onClick={() => cycleViewport(-1)} aria-label="Previous viewport profile">
+              ‹
+            </button>
+            <span>
+              {previewViewport.label} ({previewViewport.widthPx}px)
+            </span>
+            <button type="button" onClick={() => cycleViewport(1)} aria-label="Next viewport profile">
+              ›
+            </button>
+          </div>
           <button type="button" onClick={() => setMode("design")}>
             Exit Preview
           </button>
         </div>
         <main className="shell-center shell-center-preview">
           {previewableTarget ? (
-            <ThemeRenderer
-              document={project}
-              assetResolver={resolver}
-              componentAdapters={componentAdapters}
-              copyContracts={copyContracts}
-              target={previewableTarget}
-              hostSettings={hostSettings}
-            />
+            <div className="preview-viewport-frame" style={{ width: previewViewport.widthPx }}>
+              <ThemeRenderer
+                document={project}
+                assetResolver={resolver}
+                componentAdapters={componentAdapters}
+                copyContracts={copyContracts}
+                target={previewableTarget}
+                hostSettings={hostSettings}
+              />
+            </div>
           ) : (
             <p className="shell-empty">This project has no pages or popups yet.</p>
           )}
@@ -240,12 +276,18 @@ export function StudioShell(): React.ReactNode {
         onEnterFocusMode={() => setFocusMode(true)}
         onOpenValidation={() => setValidationOpen(true)}
         onOpenPerformance={() => setPerformanceOpen(true)}
+        onOpenCopyReview={() => setCopyReviewOpen(true)}
+        onOpenDevPreview={() => setDevPreviewOpen(true)}
+        onOpenLinkFDraft={() => setLinkFDraftOpen(true)}
+        onOpenPublishToFDraft={() => setPublishOpen(true)}
       />
       <div className="shell-body">
         {mode === "assets" ? (
           <AssetWorkspace resolver={resolver} />
         ) : mode === "behaviour" ? (
           <BehaviourWorkspace resolver={resolver} componentAdapters={componentAdapters} copyContracts={copyContracts} />
+        ) : mode === "simulate" ? (
+          <SimulateWorkspace resolver={resolver} componentAdapters={componentAdapters} copyContracts={copyContracts} />
         ) : (
           <>
             {!leftCollapsed && (
@@ -287,6 +329,33 @@ export function StudioShell(): React.ReactNode {
       <StatusBar dirty={state.dirty} lastSavedAt={open?.lastSavedAt} zoomPercent={zoomPercent} onZoomChange={setZoomPercent} zoomControlsOwnedElsewhere={mode === "design"} hostSettings={hostSettings} onHostSettingsChange={setHostSettings} />
       {validationOpen && <ValidationPanel project={project} onClose={() => setValidationOpen(false)} onNavigate={handleValidationNavigate} />}
       {performanceOpen && <PerformanceInspectorPanel project={project} onClose={() => setPerformanceOpen(false)} />}
+      {copyReviewOpen && (
+        <CopyReviewPanel
+          project={project}
+          copyContracts={copyContracts}
+          resolver={resolver}
+          componentAdapters={componentAdapters}
+          onClose={() => setCopyReviewOpen(false)}
+          onNavigate={handleCopyReviewNavigate}
+        />
+      )}
+      {devPreviewOpen && <DevPreviewPanel onClose={() => setDevPreviewOpen(false)} />}
+      {linkFDraftOpen && (
+        <LinkFDraftRepositoryDialog
+          onClose={() => setLinkFDraftOpen(false)}
+          onLinkChanged={() => setPublishKey((k) => k + 1)}
+        />
+      )}
+      {publishOpen && (
+        <PublishToFDraftPanel
+          key={publishKey}
+          onClose={() => setPublishOpen(false)}
+          onLinkRepository={() => {
+            setPublishOpen(false);
+            setLinkFDraftOpen(true);
+          }}
+        />
+      )}
     </div>
   );
 }

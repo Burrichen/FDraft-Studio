@@ -161,12 +161,14 @@ export async function importProjectFromFdtheme(fdthemeBytes: Uint8Array): Promis
     pages: document.pages,
     popups: document.popups,
     behaviourRules: document.behaviourRules,
+    simulationScenarios: [],
   };
 
   const warnings = [
     "This project was created by importing a compiled .fdtheme package, not opened from an editable source.",
     "Any asset not referenced anywhere in the theme was already discarded when it was compiled and cannot be recovered here.",
     "Editor state (layer selection, canvas viewport, open panels) isn't part of a compiled theme and starts fresh.",
+    "Saved simulation scenarios aren't part of a compiled theme and start fresh — only the built-in default scenarios are available until new ones are saved.",
   ];
 
   return { project, assets, warnings };

@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import { readZipSafely, createDeterministicZip } from "../../src/packaging/zip.js";
 import {
   assertSafeArchiveEntry,
+  assertSafeArchiveTotalSize,
   isPathSafeInArchive,
   MAX_ARCHIVE_COMPRESSION_RATIO,
   MAX_FILE_SIZE_BYTES,
+  MAX_TOTAL_UNCOMPRESSED_BYTES,
 } from "../../src/packaging/security.js";
 import { RelativeAssetPathSchema } from "../../src/schema/primitives.js";
 import { SdkError } from "../../src/errors.js";
@@ -95,6 +97,21 @@ describe("archive security policy", () => {
     expect(caught).toBeInstanceOf(SdkError);
     expect((caught as SdkError).code).toBe("ARCHIVE_TOO_MANY_FILES");
   }, 20_000);
+
+  it("rejects a total-uncompressed-size over the archive-wide limit", () => {
+    expect(() => assertSafeArchiveTotalSize(MAX_TOTAL_UNCOMPRESSED_BYTES + 1)).toThrow(SdkError);
+    let caught: unknown;
+    try {
+      assertSafeArchiveTotalSize(MAX_TOTAL_UNCOMPRESSED_BYTES + 1);
+    } catch (error) {
+      caught = error;
+    }
+    expect((caught as SdkError).code).toBe("ARCHIVE_TOO_LARGE");
+  });
+
+  it("accepts a total size exactly at the limit, only rejecting once it's exceeded", () => {
+    expect(() => assertSafeArchiveTotalSize(MAX_TOTAL_UNCOMPRESSED_BYTES)).not.toThrow();
+  });
 
   it("round-trips a legitimate archive with an ordinary file count and ratio", () => {
     const archive = createDeterministicZip({ "manifest.json": new TextEncoder().encode("{}"), "assets/a.png": new Uint8Array([1, 2, 3]) });

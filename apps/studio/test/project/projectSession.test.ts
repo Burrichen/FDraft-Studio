@@ -297,3 +297,16 @@ describe("ProjectSession: autosave", () => {
     });
   });
 });
+
+describe("ProjectSession: saveAs rejects a path too long for Windows before writing anything", () => {
+  it("throws and leaves no file behind, rather than attempting a partial write", async () => {
+    await withTempDir(async (dir) => {
+      const { session, platform } = await makeSession(dir);
+      session.newProject("Event");
+      const tooLong = join(dir, "a".repeat(300), "event.fdstudio");
+
+      await expect(session.saveAs(tooLong, "file")).rejects.toThrow(/exceeds Windows' path length limit/);
+      expect(await platform.exists(tooLong)).toBe(false);
+    });
+  });
+});

@@ -11,6 +11,40 @@
   box-sizing: border-box;
 }
 
+/*
+ * Global keyboard-focus visibility default. Before this, Studio's own UI
+ * chrome had zero `:focus`/`:focus-visible` styling anywhere — a keyboard
+ * user tabbing through panels/dialogs got only whatever the OS/WebView's
+ * bare default happened to render, or nothing at all where a more
+ * specific rule (like the canvas viewport's own `outline: none`)
+ * suppressed it without a replacement. This is the default; a handful of
+ * components (e.g. the canvas viewport) layer their own more specific
+ * `:focus-visible` rule on top for a better fit against their own
+ * background.
+ */
+:focus-visible {
+  outline: 2px solid #f97316;
+  outline-offset: 2px;
+}
+
+/*
+ * Defensive, not reactive to any current problem — Studio's own editor
+ * chrome has no CSS transitions/animations today (confirmed by audit),
+ * so nothing is actually jarring yet. This is forward-defense: any chrome
+ * animation added later is automatically covered, rather than relying on
+ * every future author to remember to gate it themselves.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 .shell {
   display: flex;
   flex-direction: column;
@@ -409,14 +443,26 @@
   cursor: pointer;
 }
 
+.preview-viewport-cycler {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.preview-viewport-cycler button {
+  padding: 2px 10px;
+}
+
 .shell-center-preview {
   padding: 24px;
   align-items: center;
   justify-content: center;
+  overflow: auto;
 }
 
-.shell-center-preview > * {
-  width: 960px;
+.preview-viewport-frame {
+  max-width: 100%;
+  background: #fff;
 }
 
 /* Distraction-free canvas mode: same editable Canvas as Design mode, all chrome hidden. */

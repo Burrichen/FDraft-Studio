@@ -97,10 +97,12 @@ describe("BehaviourWorkspace", () => {
       await user.click(screen.getByRole("button", { name: "+ Add rule" }));
       await waitFor(() => expect(context.session.getState().open!.project.behaviourRules).toHaveLength(1));
 
-      await user.click(screen.getByRole("button", { name: /Duplicate/ }));
+      // "New rule" is `createDefaultBehaviourRule`'s default name — matched exactly since the
+      // Simulation panel's own scenario rows also render "Duplicate <scenario name>" buttons.
+      await user.click(screen.getByRole("button", { name: "Duplicate New rule" }));
       await waitFor(() => expect(context.session.getState().open!.project.behaviourRules).toHaveLength(2));
 
-      const deleteButtons = screen.getAllByRole("button", { name: /^Delete/ });
+      const deleteButtons = screen.getAllByRole("button", { name: /^Delete New rule/ });
       await user.click(deleteButtons[0]!);
       await waitFor(() => expect(context.session.getState().open!.project.behaviourRules).toHaveLength(1));
     });

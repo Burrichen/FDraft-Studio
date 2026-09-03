@@ -36,6 +36,29 @@ describe("SVG safety policy", () => {
     expect(isSvgSafe(svg)).toBe(false);
   });
 
+  it("rejects a <use> referencing an external document", () => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg"><use href="https://evil.example/sprite.svg#icon"/></svg>`;
+    expect(isSvgSafe(svg)).toBe(false);
+    expect(checkSvgSafety(svg)).toContainEqual(expect.objectContaining({ rule: "no-use-external" }));
+  });
+
+  it("accepts a <use> referencing a local fragment", () => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg"><defs><circle id="dot" r="1"/></defs><use href="#dot"/></svg>`;
+    expect(checkSvgSafety(svg).some((issue) => issue.rule === "no-use-external")).toBe(false);
+  });
+
+  it("rejects @import inside <style>", () => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg"><style>@import url("https://evil.example/x.css");</style></svg>`;
+    expect(isSvgSafe(svg)).toBe(false);
+    expect(checkSvgSafety(svg)).toContainEqual(expect.objectContaining({ rule: "no-css-import" }));
+  });
+
+  it("rejects a custom XML entity declaration", () => {
+    const svg = `<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY xxe "boom">]><svg xmlns="http://www.w3.org/2000/svg"><title>&xxe;</title></svg>`;
+    expect(isSvgSafe(svg)).toBe(false);
+    expect(checkSvgSafety(svg)).toContainEqual(expect.objectContaining({ rule: "no-entity-expansion" }));
+  });
+
   it("rejects a document with no <svg> root", () => {
     expect(isSvgSafe("<not-svg></not-svg>")).toBe(false);
   });

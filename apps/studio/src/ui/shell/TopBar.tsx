@@ -1,4 +1,4 @@
-export type StudioMode = "design" | "assets" | "behaviour" | "preview";
+export type StudioMode = "design" | "assets" | "behaviour" | "simulate" | "preview";
 
 export interface TopBarProps {
   projectName: string;
@@ -21,12 +21,17 @@ export interface TopBarProps {
   onEnterFocusMode: () => void;
   onOpenValidation: () => void;
   onOpenPerformance: () => void;
+  onOpenCopyReview: () => void;
+  onOpenDevPreview: () => void;
+  onOpenLinkFDraft: () => void;
+  onOpenPublishToFDraft: () => void;
 }
 
 const MODES: { id: StudioMode; label: string }[] = [
   { id: "design", label: "Design" },
   { id: "assets", label: "Assets" },
   { id: "behaviour", label: "Behaviour" },
+  { id: "simulate", label: "Simulate" },
   { id: "preview", label: "Preview" },
 ];
 
@@ -74,8 +79,20 @@ export function TopBar(props: TopBarProps): React.ReactNode {
         <button type="button" onClick={props.onOpenValidation} aria-label="Open validation panel">
           Validate
         </button>
+        <button type="button" onClick={props.onOpenCopyReview} aria-label="Open copy review">
+          Copy review
+        </button>
         <button type="button" onClick={props.onOpenPerformance} aria-label="Open performance inspector">
           Performance
+        </button>
+        <button type="button" onClick={props.onOpenDevPreview} aria-label="Preview in FDraft" title="Development-only: connect to a local FDraft dev server">
+          Preview in FDraft
+        </button>
+        <button type="button" onClick={props.onOpenLinkFDraft} aria-label="Link FDraft Repository">
+          Link FDraft Repo
+        </button>
+        <button type="button" onClick={props.onOpenPublishToFDraft} aria-label="Publish to FDraft">
+          Publish to FDraft
         </button>
         <button type="button" onClick={props.onClose} aria-label="Close project">
           Close

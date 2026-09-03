@@ -1,5 +1,6 @@
 import type { ProjectMetadata, StudioProjectDocument } from "@fdraft/theme-sdk";
 import type { StudioPlatform } from "../platform/types.js";
+import { exceedsWindowsMaxPath, WINDOWS_MAX_PATH } from "../platform/pathUtils.js";
 import type { StudioPaths } from "./paths.js";
 import {
   createMinimalProjectTemplate,
@@ -49,6 +50,28 @@ const INITIAL_STATE: ProjectSessionState = {
 export function isMissingPathError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return /ENOENT|no such file|cannot find|not found/i.test(message);
+}
+
+/** True for filesystem errors that mean "something else currently has this file open" — common on Windows when another program has it open, or an antivirus scan is holding a handle mid-write. */
+export function isFileLockedError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /EBUSY|ETXTBSY|resource busy or locked|being used by another process/i.test(message);
+}
+
+/** True for the proactive "this path would exceed Windows' path limit" rejection thrown before a write is attempted — see `PATH_TOO_LONG_MESSAGE_MARKER`. */
+export function isPathTooLongError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes(PATH_TOO_LONG_MESSAGE_MARKER);
+}
+
+/** A stable, matchable substring every "path too long" rejection includes, regardless of which exact path/limit triggered it — `isPathTooLongError` matches on this rather than re-deriving the limit from the message text. */
+export const PATH_TOO_LONG_MESSAGE_MARKER = "exceeds Windows' path length limit";
+
+/** Rejects *before* any write is attempted, on every host OS — never lets a save/export/publish silently produce a path Windows itself couldn't open later. Call this at every new-path write site (`saveProjectAs`, theme export, publish). */
+export function assertPathNotTooLongForWindows(path: string): void {
+  if (exceedsWindowsMaxPath(path)) {
+    throw new Error(`"${path}" is ${path.length} characters, which ${PATH_TOO_LONG_MESSAGE_MARKER} (${WINDOWS_MAX_PATH}) — choose a shorter name or a less deeply-nested folder.`);
+  }
 }
 
 /**
@@ -147,6 +170,7 @@ export class ProjectSession {
 
   async saveAs(path: string, kind: ProjectStorageKind): Promise<void> {
     if (!this.state.open) return;
+    assertPathNotTooLongForWindows(path);
     const saved = await saveProjectAs(this.platform, this.state.open, path, kind, this.sdkVersion);
     this.savedSnapshotJson = JSON.stringify(saved.project);
     this.setState({ open: saved, dirty: false, errorMessage: null });
@@ -307,5 +331,7 @@ export class ProjectSession {
 
 function describeError(error: unknown): string {
   if (isMissingPathError(error)) return "This project's file or folder could not be found. It may have been moved or deleted.";
+  if (isFileLockedError(error)) return "This file is in use by another program (or being scanned by antivirus software). Close it there and try again.";
+  if (isPathTooLongError(error)) return error instanceof Error ? error.message : String(error);
   return error instanceof Error ? error.message : String(error);
 }

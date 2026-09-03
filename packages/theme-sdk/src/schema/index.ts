@@ -5,6 +5,7 @@ export * from "./assets.js";
 export * from "./components.js";
 export * from "./interaction.js";
 export * from "./behaviour.js";
+export * from "./simulation.js";
 export * from "./transform.js";
 export * from "./layers.js";
 export * from "./pages.js";

@@ -1,0 +1,34 @@
+.simulate-workspace {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  min-height: 0;
+  background: #fff;
+}
+
+.simulate-panel-column {
+  overflow-y: auto;
+  padding: 12px;
+  border-right: 1px solid #e2e2e5;
+}
+
+.simulate-preview-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 12px;
+  gap: 8px;
+}
+
+.simulate-live-preview {
+  flex: 1;
+  min-height: 300px;
+  border: 1px solid #e2e2e5;
+  overflow: auto;
+}
+
+.simulate-empty {
+  color: #888;
+  font-size: 0.85rem;
+}

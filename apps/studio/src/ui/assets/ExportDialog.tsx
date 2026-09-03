@@ -3,6 +3,7 @@ import { useAppContext } from "../../AppContext.js";
 import { useProjectSessionState } from "../../project/useProjectSession.js";
 import { analyzeProjectExport, analyzeThemeExport, type ExportAnalysis } from "../../project/exportAnalysis.js";
 import { formatBytes } from "./AssetWorkspace.js";
+import { useModalA11y } from "../useModalA11y.js";
 
 export interface ExportDialogProps {
   kind: "fdstudio" | "fdtheme";
@@ -23,6 +24,7 @@ type Status = "analyzing" | "ready" | "exporting" | "done" | "error";
  * any previously-exported file.
  */
 export function ExportDialog({ kind, onClose }: ExportDialogProps): React.ReactNode {
+  const modalRef = useModalA11y(onClose);
   const { platform, session } = useAppContext();
   const state = useProjectSessionState(session);
   const project = state.open!.project;
@@ -71,7 +73,7 @@ export function ExportDialog({ kind, onClose }: ExportDialogProps): React.ReactN
 
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-label={kind === "fdstudio" ? "Export project" : "Export theme"}>
-      <div className="modal">
+      <div className="modal" ref={modalRef} tabIndex={-1}>
         <div className="modal-header">
           <h2>{kind === "fdstudio" ? "Export editable project (.fdstudio)" : "Export runtime theme (.fdtheme)"}</h2>
           <button type="button" onClick={onClose} aria-label="Close">

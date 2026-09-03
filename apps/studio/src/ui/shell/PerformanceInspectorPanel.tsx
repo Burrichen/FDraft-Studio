@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { StudioProjectDocument } from "@fdraft/theme-sdk";
 import { PERFORMANCE_TIER_CAPS } from "@fdraft/theme-renderer";
 import { analyzePerformance } from "../../performance/performanceInspector.js";
+import { useModalA11y } from "../useModalA11y.js";
 
 export interface PerformanceInspectorPanelProps {
   project: StudioProjectDocument;
@@ -19,13 +20,14 @@ const TIER_LABEL: Record<"low" | "medium" | "high", string> = { low: "Low", medi
  * for.
  */
 export function PerformanceInspectorPanel({ project, onClose }: PerformanceInspectorPanelProps): React.ReactNode {
+  const modalRef = useModalA11y(onClose);
   const [tier, setTier] = useState<"low" | "medium" | "high">("high");
   const report = useMemo(() => analyzePerformance(project, tier), [project, tier]);
   const caps = PERFORMANCE_TIER_CAPS[tier];
 
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Performance inspector">
-      <div className="modal">
+      <div className="modal" ref={modalRef} tabIndex={-1}>
         <div className="modal-header">
           <h2>Performance inspector</h2>
           <button type="button" onClick={onClose} aria-label="Close">

@@ -311,6 +311,7 @@ export async function buildSampleProject(): Promise<SampleProjectFixture> {
         actions: [{ type: "setImageState", stateGroupId: SAMPLE_IDS.stateGroup, stateId: SAMPLE_IDS.stateHover }],
       },
     ],
+    simulationScenarios: [],
   };
 
   return {

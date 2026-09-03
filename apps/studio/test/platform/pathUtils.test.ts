@@ -30,3 +30,18 @@ describe("pathUtils (Windows-style paths)", () => {
     expect(dirnamePath("C:\\project.fdstudio")).toBe("C:\\");
   });
 });
+
+describe("pathUtils (UNC paths)", () => {
+  it("joins segments onto a UNC share root", () => {
+    expect(joinPath("\\\\server\\share", "My Event", "project.fdstudio")).toBe("\\\\server\\share\\My Event\\project.fdstudio");
+  });
+
+  it("computes dirname/basename for a UNC path", () => {
+    expect(dirnamePath("\\\\server\\share\\My Event\\project.fdstudio")).toBe("\\\\server\\share\\My Event");
+    expect(basenamePath("\\\\server\\share\\My Event\\project.fdstudio")).toBe("project.fdstudio");
+  });
+
+  it("preserves the \\\\server\\share root when dirname reaches the top", () => {
+    expect(dirnamePath("\\\\server\\share\\project.fdstudio")).toBe("\\\\server\\share");
+  });
+});

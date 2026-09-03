@@ -2138,6 +2138,123 @@
         "additionalProperties": false
       }
     },
+    "simulationScenarios": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          },
+          "eventStatus": {
+            "type": "string",
+            "minLength": 1
+          },
+          "eventActive": {
+            "type": "boolean"
+          },
+          "eventAvailable": {
+            "type": "boolean"
+          },
+          "optedIn": {
+            "type": "boolean"
+          },
+          "draftGenerated": {
+            "type": "boolean"
+          },
+          "eventCompleted": {
+            "type": "boolean"
+          },
+          "progressPercent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "watchedCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "targetCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "performanceTier": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "reducedMotion": {
+            "type": "boolean"
+          },
+          "currentPageId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "currentPopupId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "dateTimeOverrideMs": {
+            "type": "number"
+          },
+          "placeholderValues": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "dataProfile": {
+            "default": "normal",
+            "type": "string",
+            "enum": [
+              "normal",
+              "empty",
+              "loading",
+              "error",
+              "longTitle",
+              "maxFilmCards"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "eventStatus",
+          "eventActive",
+          "eventAvailable",
+          "optedIn",
+          "draftGenerated",
+          "eventCompleted",
+          "progressPercent",
+          "watchedCount",
+          "targetCount",
+          "performanceTier",
+          "reducedMotion",
+          "dataProfile"
+        ],
+        "additionalProperties": false
+      }
+    },
     "editorState": {
       "type": "object",
       "properties": {
@@ -2197,7 +2314,8 @@
     "masters",
     "pages",
     "popups",
-    "behaviourRules"
+    "behaviourRules",
+    "simulationScenarios"
   ],
   "additionalProperties": false,
   "$defs": {

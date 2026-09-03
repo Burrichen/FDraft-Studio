@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { checkDesignWarnings, validateProject, type StudioProjectDocument } from "@fdraft/theme-sdk";
 import type { ShellTarget } from "./LeftPanel.js";
 import { selectSingle, type Selection } from "../../editor/selection.js";
+import { useModalA11y } from "../useModalA11y.js";
 
 export interface ValidationPanelProps {
   project: StudioProjectDocument;
@@ -27,6 +28,7 @@ function targetFor(project: StudioProjectDocument, kind: "masters" | "pages" | "
  * shortcut.
  */
 export function ValidationPanel({ project, onClose, onNavigate }: ValidationPanelProps): React.ReactNode {
+  const modalRef = useModalA11y(onClose);
   const schemaIssues = useMemo(() => validateProject(project).issues, [project]);
   const designWarnings = useMemo(() => checkDesignWarnings(project), [project]);
 
@@ -42,7 +44,7 @@ export function ValidationPanel({ project, onClose, onNavigate }: ValidationPane
 
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Validation">
-      <div className="modal">
+      <div className="modal" ref={modalRef} tabIndex={-1}>
         <div className="modal-header">
           <h2>Validation</h2>
           <button type="button" onClick={onClose} aria-label="Close">

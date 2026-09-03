@@ -1,0 +1,52 @@
+.dev-preview-modal {
+  width: min(600px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dev-preview-hint {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 0;
+}
+
+.dev-preview-field {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8rem;
+  gap: 4px;
+}
+
+.dev-preview-row {
+  display: flex;
+  gap: 6px;
+}
+
+.dev-preview-row input {
+  flex: 1;
+}
+
+.dev-preview-build {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  background: #f4f4f5;
+  border-radius: 6px;
+}
+
+.dev-preview-status {
+  font-size: 0.8rem;
+  color: #555;
+  margin: 0;
+}
+
+.dev-preview-status-ok {
+  color: #15803d;
+}
+
+.dev-preview-status-error {
+  color: #b91c1c;
+}

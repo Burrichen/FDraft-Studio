@@ -1,0 +1,113 @@
+name: Release Studio (Windows installer)
+
+# Fires on a Studio-specific version tag (e.g. studio-v0.1.0) — separate
+# tag namespace from theme-sdk-v*/theme-renderer-v*/theme-runtime-v*,
+# which release the shared SDK/renderer packages, not the Studio
+# application itself.
+#
+# Windows-only, `runs-on: windows-latest`, deliberately — cross-compiling
+# a Windows Tauri/NSIS bundle from macOS was tried and confirmed
+# infeasible in this project's actual toolchain (fails compiling the
+# `ring` crate for lack of a Windows C toolchain/SDK, which `rustup`
+# alone cannot supply on macOS; this is FDraft's own already-proven
+# finding for the identical Tauri v2 stack, not a new discovery here —
+# see FDraft/docs/product-spec.md, "Windows installer packaging"). A real
+# `.exe`/NSIS installer needs an actual Windows toolchain, which only a
+# `windows-latest` GitHub Actions runner reliably provides.
+#
+# No Windows publisher/Authenticode signing — there is no code-signing
+# certificate available for this project. A fresh install will show an
+# unsigned-publisher SmartScreen warning; this is accurately documented
+# (see docs/guides/RELEASE_CHECKLIST.md) rather than silently omitted or
+# falsely implied as solved. This mirrors FDraft's own accurate
+# "no Windows publisher/Authenticode signing" note for the identical
+# situation.
+#
+# No auto-update infrastructure — Studio's `tauri.conf.json` deliberately
+# has no `plugins.updater`/`createUpdaterArtifacts`, unlike FDraft's own
+# Tauri config. FDraft's updater is FDraft-specific (its own signing key,
+# its own release-endpoint), and reusing or duplicating it here would
+# couple the two applications' release processes — explicitly avoided.
+on:
+  push:
+    tags:
+      - "studio-v*.*.*"
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/studio/src-tauri
+
+      - run: pnpm install --frozen-lockfile
+
+      # A tag that doesn't match apps/studio/package.json's own version
+      # almost always means the version bump was forgotten before
+      # tagging — catching it here beats shipping an installer whose
+      # bundled binary silently disagrees with its own GitHub Release tag.
+      - name: Verify tag matches apps/studio/package.json version
+        shell: bash
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#studio-v}"
+          PKG_VERSION=$(node -p "require('./apps/studio/package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match apps/studio/package.json version $PKG_VERSION — bump the version and commit before tagging."
+            exit 1
+          fi
+
+      # The same gate CI runs for every push/PR (see ci.yml's studio-frontend
+      # job) — theme-sdk/theme-renderer built first since Studio consumes
+      # their workspace-linked `dist/` output, not their source.
+      - run: pnpm run check:architecture
+      - run: pnpm run check:boundaries
+      - run: pnpm run lint
+      - run: pnpm --filter @fdraft/theme-sdk typecheck
+      - run: pnpm --filter @fdraft/theme-sdk test
+      - run: pnpm --filter @fdraft/theme-sdk build
+      - run: pnpm --filter @fdraft/theme-renderer typecheck
+      - run: pnpm --filter @fdraft/theme-renderer test
+      - run: pnpm --filter @fdraft/theme-renderer build
+      - run: pnpm --filter @fdraft/studio typecheck
+      - run: pnpm --filter @fdraft/studio test
+
+      - name: Determine prerelease flag from the tag's semver suffix
+        id: prerelease-check
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/studio
+          tagName: ${{ github.ref_name }}
+          releaseName: "FDraft Studio ${{ github.ref_name }}"
+          releaseBody: |
+            Windows installer for FDraft Studio ${{ github.ref_name }}.
+
+            **Not code-signed** — no Windows publisher/Authenticode certificate is
+            available for this project. Windows SmartScreen will show an
+            unsigned-publisher warning on first run; this is expected, not an error.
+            See docs/guides/RELEASE_CHECKLIST.md for the full release procedure.
+          releaseDraft: true
+          prerelease: ${{ steps.prerelease-check.outputs.is_prerelease }}

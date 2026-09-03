@@ -52,3 +52,19 @@ export function stemName(path: string, extension: string): string {
   const base = basenamePath(path);
   return base.toLowerCase().endsWith(extension.toLowerCase()) ? base.slice(0, base.length - extension.length) : base;
 }
+
+/**
+ * Windows' legacy `MAX_PATH` limit — still the safe default without
+ * per-application/system-wide opt-in long-path support enabled. Checked
+ * proactively, on every host OS, before a write is attempted: a project
+ * saved on macOS but later opened on a Windows machine (or a repository
+ * cloned into a deeply-nested folder) should never silently produce a
+ * path Windows itself can't open, and the failure should be a clear
+ * message *before* any bytes are written, not a cryptic OS error after a
+ * partial write.
+ */
+export const WINDOWS_MAX_PATH = 260;
+
+export function exceedsWindowsMaxPath(path: string): boolean {
+  return path.length >= WINDOWS_MAX_PATH;
+}

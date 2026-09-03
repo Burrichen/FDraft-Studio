@@ -5,42 +5,107 @@ on:
     branches: [main]
   pull_request:
 
+# Independent jobs per concern, not one monolithic job — a Studio failure
+# no longer marks an unrelated SDK job red, and each is diagnosable on its
+# own in the GitHub UI. `needs:` is used only where there's a real
+# build-output dependency (theme-renderer consumes theme-sdk's built
+# `dist/`, not its source — confirmed by this repo's own package
+# `exports`), never to serialize unrelated concerns. Each job re-runs
+# `pnpm install`/upstream builds on its own fresh checkout rather than
+# sharing artifacts across jobs — simpler and more robust than juggling
+# upload/download-artifact for a modest speed gain, given this workspace's
+# size.
 jobs:
-  build-and-test:
+  workspace-checks:
+    name: Workspace checks (architecture, boundaries, lint, audit)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-
       - run: pnpm install --frozen-lockfile
-
       - run: pnpm run check:architecture
       - run: pnpm run check:boundaries
       - run: pnpm run lint
+      - name: Dependency audit (fails on high/critical advisories)
+        run: pnpm audit --audit-level=high
 
-      # theme-sdk first — theme-renderer and renderer-lab both consume its
-      # build output via the pnpm workspace link, not its source.
+  sdk:
+    name: "@fdraft/theme-sdk"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @fdraft/theme-sdk typecheck
       - run: pnpm --filter @fdraft/theme-sdk test
       - run: pnpm --filter @fdraft/theme-sdk build
       - run: pnpm run check:schemas
 
+  renderer:
+    name: "@fdraft/theme-renderer"
+    needs: sdk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @fdraft/theme-sdk build
       - run: pnpm --filter @fdraft/theme-renderer typecheck
       - run: pnpm --filter @fdraft/theme-renderer test
       - run: pnpm --filter @fdraft/theme-renderer build
 
+  renderer-lab:
+    name: "@fdraft/renderer-lab"
+    needs: renderer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @fdraft/theme-sdk build
+      - run: pnpm --filter @fdraft/theme-renderer build
       - run: pnpm --filter @fdraft/renderer-lab typecheck
       - run: pnpm --filter @fdraft/renderer-lab build
 
+  studio-frontend:
+    name: "@fdraft/studio (frontend)"
+    needs: renderer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @fdraft/theme-sdk build
+      - run: pnpm --filter @fdraft/theme-renderer build
       - run: pnpm --filter @fdraft/studio typecheck
       - run: pnpm --filter @fdraft/studio test
       - run: pnpm --filter @fdraft/studio build
+
+  studio-tauri-rust:
+    name: "@fdraft/studio (Tauri/Rust)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
       # Linux system libraries Tauri v2 needs even just to `cargo check`/lint its Rust backend.
       - name: Install Tauri Linux build dependencies
@@ -61,5 +126,5 @@ jobs:
 
   # A full `tauri build` (real installers per OS: .dmg/.app, .msi/.exe, .deb/.AppImage)
   # needs a per-OS matrix and is a heavier, separate concern from the fast
-  # PR-gating job above — reserved for a dedicated release workflow once
-  # Studio has something worth releasing (tracked in docs/IMPLEMENTATION_STATUS.md).
+  # PR-gating jobs above — see release-studio-windows.yml for the Windows
+  # installer specifically (tag-triggered, not run on every push/PR).

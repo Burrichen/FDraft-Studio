@@ -8,6 +8,12 @@
   user-select: none;
 }
 
+/* Suppressing the default outline above is only safe because keyboard focus still gets a real, visible indicator here. */
+.studio-canvas-viewport:focus-visible {
+  outline: 2px solid #f97316;
+  outline-offset: -2px;
+}
+
 .studio-canvas-viewport textarea {
   user-select: text;
 }

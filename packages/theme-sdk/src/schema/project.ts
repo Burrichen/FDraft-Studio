@@ -5,6 +5,7 @@ import { AssetFolderSchema, AssetRecordSchema, ImageStateGroupSchema } from "./a
 import { ComponentRequirementSchema } from "./components.js";
 import { MasterPageSchema, PageSchema, PopupSchema } from "./pages.js";
 import { BehaviourRuleSchema } from "./behaviour.js";
+import { SimulationScenarioSchema } from "./simulation.js";
 import { CURRENT_PROJECT_FORMAT_VERSION } from "./versions.js";
 
 export const ProjectMetadataSchema = z.strictObject({
@@ -51,6 +52,8 @@ export const StudioProjectDocumentSchema = z.strictObject({
   popups: z.array(PopupSchema),
   /** Project-wide, declaration-ordered no-code rules — see `BehaviourRuleSchema`. Defaults to none for older documents. */
   behaviourRules: z.array(BehaviourRuleSchema).default([]),
+  /** User-saved QA presets for the Simulation panel and Preview mode — see `SimulationScenarioSchema`. Defaults to none for older documents; a host also offers a fixed set of built-in scenarios that never live here. */
+  simulationScenarios: z.array(SimulationScenarioSchema).default([]),
   editorState: EditorStateSchema.optional(),
 });
 export type StudioProjectDocument = z.infer<typeof StudioProjectDocumentSchema>;
@@ -78,5 +81,6 @@ export function createEmptyProject(metadata: ProjectMetadata): StudioProjectDocu
     pages: [],
     popups: [],
     behaviourRules: [],
+    simulationScenarios: [],
   };
 }

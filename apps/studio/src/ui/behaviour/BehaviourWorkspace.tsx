@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { ThemeRenderer, resolveActiveBehaviourRules, type ComponentAdapterRegistry, type ComponentCopyContractRegistry, type AssetResolver, type HostSettings, type LayerInteractionFlags, type RenderState } from "@fdraft/theme-renderer";
-import type { BehaviourRule, Id } from "@fdraft/theme-sdk";
+import { ThemeRenderer, resolveActiveBehaviourRules, type ComponentAdapterRegistry, type ComponentCopyContractRegistry, type AssetResolver, type LayerInteractionFlags } from "@fdraft/theme-renderer";
+import type { BehaviourRule, Id, SimulationScenario } from "@fdraft/theme-sdk";
 import { useAppContext } from "../../AppContext.js";
 import { useProjectSessionState } from "../../project/useProjectSession.js";
 import {
@@ -17,7 +17,19 @@ import {
   buildReorderBehaviourRuleCommand,
   listAllLayers,
 } from "../../behaviour/behaviourCommands.js";
-import { buildBehaviourNameLookups, describeBehaviourRule, describeTargetKey } from "../../behaviour/describeBehaviourRule.js";
+import { buildBehaviourNameLookups, describeBehaviourRule } from "../../behaviour/describeBehaviourRule.js";
+import { DEFAULT_SIMULATION_LIVE_STATE, deriveHostSettings, deriveRenderState, scenarioToLiveState, type SimulationLiveState } from "../../simulation/simulationState.js";
+import { DEFAULT_SIMULATION_SCENARIOS } from "../../simulation/defaultScenarios.js";
+import {
+  createScenarioFromState,
+  buildAddSimulationScenarioCommand,
+  buildDuplicateSimulationScenarioCommand,
+  buildDeleteSimulationScenarioCommand,
+  buildRenameSimulationScenarioCommand,
+  buildUpdateSimulationScenarioCommand,
+} from "../../simulation/simulationCommands.js";
+import { SimulationPanel } from "../simulation/SimulationPanel.js";
+import { BehaviourTracePanel } from "./BehaviourTracePanel.js";
 import { ConditionEditor } from "./ConditionEditor.js";
 import { ActionEditor } from "./ActionEditor.js";
 import "./behaviour.css";
@@ -31,33 +43,7 @@ export interface BehaviourWorkspaceProps {
 type TriggerType = BehaviourRule["trigger"]["type"];
 const TRIGGER_TYPES: TriggerType[] = ["whileTrue", "pageEnter", "pageExit", "popupOpen", "popupClose", "click", "hoverStart", "hoverEnd", "focus", "blur", "eventPhaseChange", "conditionBecomesTrue"];
 
-interface SimulatorState {
-  eventStatus: string;
-  eventActive: boolean;
-  eventAvailable: boolean;
-  optedIn: boolean;
-  draftGenerated: boolean;
-  eventCompleted: boolean;
-  progressPercent: number;
-  watchedCount: number;
-  targetCount: number;
-  performanceTier: "low" | "high";
-  reducedMotion: boolean;
-}
-
-const DEFAULT_SIMULATOR: SimulatorState = {
-  eventStatus: "active",
-  eventActive: true,
-  eventAvailable: true,
-  optedIn: false,
-  draftGenerated: false,
-  eventCompleted: false,
-  progressPercent: 0,
-  watchedCount: 0,
-  targetCount: 10,
-  performanceTier: "high",
-  reducedMotion: false,
-};
+const BUILT_IN_SCENARIO_IDS = new Set(DEFAULT_SIMULATION_SCENARIOS.map((s) => s.id));
 
 /**
  * Behaviour Mode: a no-code rule list + editor on the left/right, a live
@@ -77,39 +63,29 @@ export function BehaviourWorkspace({ resolver, componentAdapters, copyContracts 
   const project = state.open!.project;
 
   const [selectedRuleId, setSelectedRuleId] = useState<string | undefined>(project.behaviourRules[0]?.id);
-  const [previewTarget, setPreviewTarget] = useState<{ kind: "page" | "popup"; id: string } | undefined>(project.pages[0] ? { kind: "page", id: project.pages[0].id } : project.popups[0] ? { kind: "popup", id: project.popups[0].id } : undefined);
-  const [sim, setSim] = useState<SimulatorState>(DEFAULT_SIMULATOR);
-  const [showTrace, setShowTrace] = useState(false);
+  const [sim, setSim] = useState<SimulationLiveState>(() => ({
+    ...DEFAULT_SIMULATION_LIVE_STATE,
+    currentPageId: project.pages[0]?.id,
+    currentPopupId: project.pages[0] ? undefined : project.popups[0]?.id,
+  }));
+  const [activeScenarioId, setActiveScenarioId] = useState<Id | undefined>(undefined);
   // Real hover/focus/pressed/selected, exactly as FDraft's runtime would derive them — driven by actually
   // interacting with the live preview below, not a manual toggle, so a hover/focus-conditioned rule can be
   // checked by doing the real thing.
   const [interactionFlags, setInteractionFlags] = useState<Record<Id, LayerInteractionFlags>>({});
+  const previewTarget: { kind: "page"; pageId: Id } | { kind: "popup"; popupId: Id } | undefined = sim.currentPageId
+    ? { kind: "page", pageId: sim.currentPageId }
+    : sim.currentPopupId
+      ? { kind: "popup", popupId: sim.currentPopupId }
+      : undefined;
+  const scenarios = useMemo(() => [...DEFAULT_SIMULATION_SCENARIOS, ...project.simulationScenarios], [project.simulationScenarios]);
 
   const lookups = useMemo(() => buildBehaviourNameLookups(project), [project]);
   const layers = useMemo(() => listAllLayers(project), [project]);
   const selectedRule = project.behaviourRules.find((r) => r.id === selectedRuleId);
 
-  const hostSettings: HostSettings = useMemo(() => ({ performanceTier: sim.performanceTier, reducedMotion: sim.reducedMotion }), [sim.performanceTier, sim.reducedMotion]);
-  const renderState: RenderState = useMemo(
-    () => ({
-      activeImageStates: {},
-      eventPhase: sim.eventStatus,
-      currentPageId: previewTarget?.kind === "page" ? previewTarget.id : undefined,
-      currentPopupId: previewTarget?.kind === "popup" ? previewTarget.id : undefined,
-      interactionFlags,
-      event: {
-        eventActive: sim.eventActive,
-        eventAvailable: sim.eventAvailable,
-        optedIn: sim.optedIn,
-        draftGenerated: sim.draftGenerated,
-        eventCompleted: sim.eventCompleted,
-        progressPercent: sim.progressPercent,
-        watchedCount: sim.watchedCount,
-        targetCount: sim.targetCount,
-      },
-    }),
-    [sim, previewTarget, interactionFlags],
-  );
+  const hostSettings = useMemo(() => deriveHostSettings(sim), [sim]);
+  const renderState = useMemo(() => deriveRenderState(sim, interactionFlags), [sim, interactionFlags]);
 
   const resolution = useMemo(() => resolveActiveBehaviourRules(project.behaviourRules, renderState, hostSettings), [project.behaviourRules, renderState, hostSettings]);
 
@@ -122,6 +98,22 @@ export function BehaviourWorkspace({ resolver, componentAdapters, copyContracts 
     if (!rule) return;
     apply(buildAddBehaviourRuleCommand(rule));
     setSelectedRuleId(rule.id);
+  }
+
+  function handleApplyScenario(scenario: SimulationScenario): void {
+    setSim(scenarioToLiveState(scenario));
+    setActiveScenarioId(scenario.id);
+  }
+
+  function handleSaveAsNewScenario(): void {
+    const scenario = createScenarioFromState(`Scenario ${project.simulationScenarios.length + 1}`, sim);
+    apply(buildAddSimulationScenarioCommand(scenario));
+    setActiveScenarioId(scenario.id);
+  }
+
+  function handleDeleteScenario(scenarioId: Id): void {
+    apply(buildDeleteSimulationScenarioCommand(scenarioId));
+    if (scenarioId === activeScenarioId) setActiveScenarioId(undefined);
   }
 
   return (
@@ -169,72 +161,21 @@ export function BehaviourWorkspace({ resolver, componentAdapters, copyContracts 
       </div>
 
       <div className="behaviour-preview">
-        <div className="behaviour-simulator">
-          <h3>Simulate render context</h3>
-          <label>
-            Preview
-            <select
-              aria-label="Preview target"
-              value={previewTarget ? `${previewTarget.kind}:${previewTarget.id}` : ""}
-              onChange={(e) => {
-                const [kind, id] = e.target.value.split(":") as ["page" | "popup", string];
-                setPreviewTarget({ kind, id });
-              }}
-            >
-              {project.pages.map((p) => (
-                <option key={p.id} value={`page:${p.id}`}>
-                  {p.name}
-                </option>
-              ))}
-              {project.popups.map((p) => (
-                <option key={p.id} value={`popup:${p.id}`}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Event status
-            <input value={sim.eventStatus} onChange={(e) => setSim({ ...sim, eventStatus: e.target.value })} />
-          </label>
-          <label>
-            <input type="checkbox" checked={sim.eventActive} onChange={(e) => setSim({ ...sim, eventActive: e.target.checked })} /> Event active
-          </label>
-          <label>
-            <input type="checkbox" checked={sim.eventAvailable} onChange={(e) => setSim({ ...sim, eventAvailable: e.target.checked })} /> Event available
-          </label>
-          <label>
-            <input type="checkbox" checked={sim.optedIn} onChange={(e) => setSim({ ...sim, optedIn: e.target.checked })} /> Opted in
-          </label>
-          <label>
-            <input type="checkbox" checked={sim.draftGenerated} onChange={(e) => setSim({ ...sim, draftGenerated: e.target.checked })} /> Draft generated
-          </label>
-          <label>
-            <input type="checkbox" checked={sim.eventCompleted} onChange={(e) => setSim({ ...sim, eventCompleted: e.target.checked })} /> Event completed
-          </label>
-          <label>
-            Progress %
-            <input type="number" min={0} max={100} value={sim.progressPercent} onChange={(e) => setSim({ ...sim, progressPercent: Number(e.target.value) })} />
-          </label>
-          <label>
-            Watched count
-            <input type="number" min={0} value={sim.watchedCount} onChange={(e) => setSim({ ...sim, watchedCount: Number(e.target.value) })} />
-          </label>
-          <label>
-            Target count
-            <input type="number" min={0} value={sim.targetCount} onChange={(e) => setSim({ ...sim, targetCount: Number(e.target.value) })} />
-          </label>
-          <label>
-            Performance tier
-            <select value={sim.performanceTier} onChange={(e) => setSim({ ...sim, performanceTier: e.target.value as "low" | "high" })}>
-              <option value="high">high</option>
-              <option value="low">low</option>
-            </select>
-          </label>
-          <label>
-            <input type="checkbox" checked={sim.reducedMotion} onChange={(e) => setSim({ ...sim, reducedMotion: e.target.checked })} /> Reduced motion
-          </label>
-        </div>
+        <SimulationPanel
+          state={sim}
+          onChange={setSim}
+          pages={project.pages}
+          popups={project.popups}
+          scenarios={scenarios}
+          builtInScenarioIds={BUILT_IN_SCENARIO_IDS}
+          activeScenarioId={activeScenarioId}
+          onApplyScenario={handleApplyScenario}
+          onSaveAsNewScenario={handleSaveAsNewScenario}
+          onUpdateScenario={(scenarioId) => apply(buildUpdateSimulationScenarioCommand(scenarioId, sim))}
+          onRenameScenario={(scenarioId, name) => apply(buildRenameSimulationScenarioCommand(scenarioId, name))}
+          onDeleteScenario={handleDeleteScenario}
+          onDuplicateScenario={(scenarioId) => apply(buildDuplicateSimulationScenarioCommand(scenarioId))}
+        />
 
         <p className="behaviour-hint">Hover, focus (Tab), click, or press on the preview below to try hover/focus/pressed/selected conditions for real.</p>
         <div className="behaviour-live-preview">
@@ -244,7 +185,7 @@ export function BehaviourWorkspace({ resolver, componentAdapters, copyContracts 
               assetResolver={resolver}
               componentAdapters={componentAdapters}
               copyContracts={copyContracts}
-              target={previewTarget.kind === "page" ? { kind: "page", pageId: previewTarget.id } : { kind: "popup", popupId: previewTarget.id }}
+              target={previewTarget}
               hostSettings={hostSettings}
               renderState={renderState}
               onInteractionFlagChange={(layerId, which, value) => setInteractionFlags((prev) => ({ ...prev, [layerId]: { ...prev[layerId], [which]: value } }))}
@@ -254,27 +195,7 @@ export function BehaviourWorkspace({ resolver, componentAdapters, copyContracts 
           )}
         </div>
 
-        <button type="button" onClick={() => setShowTrace((v) => !v)}>
-          {showTrace ? "Hide trace" : "Show trace"}
-        </button>
-        {showTrace && (
-          <div className="behaviour-trace" role="region" aria-label="Behaviour rule trace">
-            {resolution.trace.length === 0 && <p className="behaviour-empty">No continuous rules are contesting anything right now.</p>}
-            {resolution.trace.map((entry) => (
-              <div key={entry.targetKey} className="behaviour-trace-entry">
-                <strong>{describeTargetKey(entry.targetKey, lookups)}</strong>
-                <ul>
-                  {entry.candidates.map((c) => (
-                    <li key={c.ruleId} className={c.ruleId === entry.winningRuleId ? "behaviour-trace-winner" : undefined}>
-                      {c.ruleId === entry.winningRuleId ? "✓ " : "· "}
-                      {c.ruleName} (priority {c.priority}) — {!c.enabled ? "disabled" : c.conditionMet ? "condition true" : "condition false"}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        )}
+        <BehaviourTracePanel resolution={resolution} lookups={lookups} />
       </div>
 
       <div className="behaviour-editor">

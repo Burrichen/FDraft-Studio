@@ -1,0 +1,104 @@
+.publish-modal {
+  width: min(700px, 90vw);
+  max-height: 85vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.publish-hint {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 0;
+}
+
+.publish-row {
+  display: flex;
+  gap: 8px;
+}
+
+.publish-status {
+  font-size: 0.85rem;
+  color: #555;
+  margin: 4px 0;
+}
+
+.publish-status-ok {
+  color: #15803d;
+}
+
+.publish-status-warn {
+  color: #b45309;
+}
+
+.publish-status-error {
+  color: #b91c1c;
+}
+
+.publish-marker-list {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+  font-size: 0.8rem;
+}
+
+.publish-marker-list-missing {
+  color: #b45309;
+}
+
+.publish-check {
+  border: 1px solid #e2e2e5;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.publish-blockers {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.publish-blockers ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.publish-diff-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  font-size: 0.8rem;
+  font-family: monospace;
+}
+
+.publish-diff-added {
+  color: #15803d;
+}
+
+.publish-diff-changed {
+  color: #b45309;
+}
+
+.publish-diff-removed {
+  color: #b91c1c;
+}
+
+.publish-overwrite-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #b45309;
+}
+
+.publish-git-hint {
+  background: #18181b;
+  color: #e4e4e7;
+  padding: 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  overflow-x: auto;
+  white-space: pre;
+}
