@@ -229,7 +229,9 @@ built and smoke-tested by *the same run*, re-verifies its SHA-256, and confirms
 4. Verify the *published* download by repeating the post-publication steps below. A green
    Actions run is not by itself proof that the published release works.
 
-- [ ] **Outstanding gate — human clean-Windows verification.** Machine verification
+- [ ] **Outstanding gate — human clean-Windows verification.** Follow
+      `docs/guides/WINDOWS_VERIFICATION_PASS.md`, an ordered ~40-minute pass with a result
+      block to fill in at the end. Machine verification
       (install/launch/uninstall/reinstall, checksums, the full test matrix on Windows) is
       done and green. What is **not** done, and cannot be done from a headless CI runner or
       a macOS workstation, is the interactive pass: walking the built-in tutorial in the
@@ -243,11 +245,16 @@ built and smoke-tested by *the same run*, re-verifies its SHA-256, and confirms
       never been run — so `testedFdraftVersion`/`testedFdraftCommit` are `null` in the
       candidate manifest. Do not publish, and do not fill those fields, until a person has
       actually run this pass and recorded the results here.
-- [ ] **No licence is declared anywhere in this repository** — no `LICENSE` file, and no
-      `license` field in any `package.json`. For a public release that is a real gap: without
-      a licence, downloaders have no granted rights, and "licence and third-party notices"
-      cannot be attached because none exist. Choosing a licence is the owner's decision, not
-      something a release process should invent. Resolve before publishing publicly.
+- [x] **Licence: MIT** (© 2026 Burrichen), matching FDraft's own publisher convention.
+      `LICENSE` at the repository root, `"license": "MIT"` in the root, Studio, SDK and
+      renderer `package.json` files, and `license`/`publisher`/`copyright` in
+      `tauri.conf.json`. `apps/studio/THIRD_PARTY_NOTICES.md` covers the 277 third-party
+      packages the installer redistributes (9 JavaScript, 268 Rust crates; every one declares
+      a machine-readable licence) — **generated**, never hand-maintained, by
+      `apps/studio/scripts/generate-third-party-notices.ts` from `pnpm licenses list --prod`
+      and `cargo metadata --filter-platform x86_64-pc-windows-msvc`. Regenerate it whenever
+      dependencies change; the release build fails if the file is missing. Both `LICENSE.txt`
+      and `THIRD_PARTY_NOTICES.md` are attached to every release.
 - [ ] Release channel: **pre-release**, because the installer is unsigned and this is the
       first public compatibility trial. The workflow passes `--prerelease` so it is never
       marked "Latest". Do not switch to a stable channel merely to avoid documenting a

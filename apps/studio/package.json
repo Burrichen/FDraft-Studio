@@ -2,7 +2,8 @@
   "name": "@fdraft/studio",
   "private": true,
   "version": "0.1.0",
-  "description": "FDraft Studio — the standalone desktop application for visually designing FDraft themes and event pages.",
+  "license": "MIT",
+  "description": "FDraft Studio \u2014 the standalone desktop application for visually designing FDraft themes and event pages.",
   "type": "module",
   "scripts": {
     "dev": "vite",

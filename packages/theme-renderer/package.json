@@ -2,7 +2,7 @@
   "name": "@fdraft/theme-renderer",
   "version": "0.1.0",
   "description": "Shared, host-agnostic DOM renderer for FDraft Studio theme/project data. Consumed identically by the fixture lab, Studio, and FDraft with different injected adapters.",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": false,
   "type": "module",
   "main": "./dist/index.js",

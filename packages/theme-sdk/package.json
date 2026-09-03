@@ -2,7 +2,7 @@
   "name": "@fdraft/theme-sdk",
   "version": "0.1.0",
   "description": "Framework-neutral contract, validation, packaging, and compiler for FDraft Studio theme and project data.",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": false,
   "type": "module",
   "main": "./dist/index.js",

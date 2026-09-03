@@ -29,6 +29,8 @@ its ordinary interface if a theme is invalid or incompatible.
 | `FDraft-Studio-0.1.0-Windows-x64-Setup.exe` | The installer. This is the download you want. |
 | `SHA256SUMS.txt` | Checksum for verifying the installer. |
 | `release-manifest.json` | Machine-readable build/compatibility record. |
+| `LICENSE.txt` | The MIT licence this software is released under. |
+| `THIRD_PARTY_NOTICES.md` | Licences and copyright notices for the 277 third-party packages the installer redistributes. |
 
 GitHub's automatically generated "Source code" archives are the repository
 source, not the application — they are not a substitute for the installer.
@@ -164,6 +166,17 @@ Open an issue on this repository. Include your Windows version, the Studio
 version (0.1.0), what you did, and what happened. Studio's diagnostics export
 deliberately excludes your project content by default — please attach a
 project file only if you are willing to share it.
+
+## Licence
+
+FDraft Studio is released under the **MIT licence** (© 2026 Burrichen) — see
+`LICENSE.txt`, attached to this release and in the repository root.
+
+The installer also redistributes compiled forms of 277 third-party packages
+(9 JavaScript, 268 Rust crates). Their licences and copyright notices are in
+the attached `THIRD_PARTY_NOTICES.md`, generated from real dependency metadata
+and filtered to the Windows target, so it describes what actually ships rather
+than the union of every platform.
 
 ## Repository documentation
 

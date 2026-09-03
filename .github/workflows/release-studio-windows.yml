@@ -264,6 +264,18 @@ jobs:
           }
           $manifest | ConvertTo-Json -Depth 5 | Out-File -FilePath (Join-Path $outDir "release-manifest.json") -Encoding utf8
 
+          # Licence and third-party notices travel with the binary: the
+          # installer redistributes compiled dependencies whose own permissive
+          # licences require their copyright notices to accompany it.
+          # THIRD_PARTY_NOTICES.md is generated from real dependency metadata
+          # (see apps/studio/scripts/generate-third-party-notices.ts), filtered
+          # to the Windows target so it describes what actually ships.
+          Copy-Item "LICENSE" (Join-Path $outDir "LICENSE.txt")
+          if (-not (Test-Path "apps/studio/THIRD_PARTY_NOTICES.md")) {
+            throw "apps/studio/THIRD_PARTY_NOTICES.md is missing — regenerate it before releasing."
+          }
+          Copy-Item "apps/studio/THIRD_PARTY_NOTICES.md" (Join-Path $outDir "THIRD_PARTY_NOTICES.md")
+
           Write-Host "Installer: $artifactPath ($size bytes)"
           Write-Host "SHA-256:   $hash"
           Get-Content (Join-Path $outDir "release-manifest.json")
@@ -328,7 +340,12 @@ jobs:
           $exePath = $null
           if ($entry) {
             Check "registry DisplayVersion matches app version ($appVersion)" ($entry.DisplayVersion -eq $appVersion)
-            Check "registry Publisher identifies Studio, not FDraft" ($entry.Publisher -eq "FDraft Studio")
+            # Publisher matches FDraft's own convention and the LICENSE's copyright
+            # holder. DisplayName is what distinguishes the two applications in
+            # Programs and Features ("FDraft Studio" vs FDraft's "FDraft (Beta)"),
+            # so that is asserted separately rather than leaning on Publisher.
+            Check "registry Publisher is the real publisher identity" ($entry.Publisher -eq "Burrichen")
+            Check "registry DisplayName is Studio's own, distinct from FDraft's" ($entry.DisplayName -eq "FDraft Studio")
             # NSIS's InstallLocation value can come back wrapped in literal
             # double quotes; Join-Path misparses a leading `"` as a drive
             # designator ("Cannot find drive '\"C'"), so strip it first.
@@ -515,5 +532,7 @@ jobs:
             --verify-tag \
             "dist-release/${{ needs.build-windows.outputs.artifact_name }}" \
             "dist-release/SHA256SUMS.txt" \
-            "dist-release/release-manifest.json"
+            "dist-release/release-manifest.json" \
+            "dist-release/LICENSE.txt" \
+            "dist-release/THIRD_PARTY_NOTICES.md"
           gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json url --jq '"Published: \(.url)"'

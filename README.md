@@ -28,6 +28,7 @@ FDraft-Studio-<version>-Windows-x64-Setup.exe
 | Code signing | **Not signed.** SmartScreen will warn about an unknown publisher on first run; verify the SHA-256 checksum in `SHA256SUMS.txt` instead. Never disable Windows Security to install it |
 | Administrator rights | Not required — installs per-user |
 | Automatic updates | None. Download newer versions from the Releases page |
+| Licence | [MIT](LICENSE). Third-party notices ship with each release |
 | Your projects | Saved as single `.fdstudio` files wherever *you* choose, never inside the install folder. Uninstalling does not delete them |
 | Tutorial | Built in and fully offline — the **Help** button, any time |
 

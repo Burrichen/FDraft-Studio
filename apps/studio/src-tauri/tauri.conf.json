@@ -26,9 +26,11 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
-    "publisher": "FDraft Studio",
-    "copyright": "© 2026 FDraft Studio",
+    "targets": [
+      "nsis"
+    ],
+    "publisher": "Burrichen",
+    "copyright": "© 2026 Burrichen. MIT licensed.",
     "category": "DeveloperTool",
     "shortDescription": "A standalone desktop theme/event-page designer for FDraft.",
     "icon": [
@@ -42,6 +44,7 @@
       "nsis": {
         "installMode": "currentUser"
       }
-    }
+    },
+    "license": "MIT"
   }
 }
