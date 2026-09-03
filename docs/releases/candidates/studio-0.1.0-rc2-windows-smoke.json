@@ -1,0 +1,21 @@
+{
+  "silent install process exits 0": true,
+  "uninstall registry entry created": true,
+  "registry DisplayVersion matches app version (0.1.0)": true,
+  "registry Publisher identifies Studio, not FDraft": true,
+  "InstallLocation reported in registry": true,
+  "installed executable exists at InstallLocation": true,
+  "Start Menu shortcut created": true,
+  "installed app launches and stays running 10s (no immediate crash)": true,
+  "reinstall over an existing install exits 0 (upgrade/repair path)": true,
+  "reinstall leaves exactly one uninstall entry (no duplicate)": true,
+  "reinstall leaves exactly one Start Menu shortcut (no duplicate)": true,
+  "installed executable still present after reinstall": true,
+  "a user file inside the install folder survives reinstall": true,
+  "silent uninstall process exits 0": true,
+  "uninstall registry entry removed": true,
+  "installed executable removed after uninstall": true,
+  "Start Menu shortcut removed after uninstall": true,
+  "app-data directory survives uninstall": true,
+  "a real user-data file in app-data survives uninstall": true
+}

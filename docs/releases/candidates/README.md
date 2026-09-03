@@ -35,6 +35,30 @@ against a real Windows FDraft build — hence
 `testedFdraftVersion`/`testedFdraftCommit` are `null` in the manifest. See
 `docs/guides/RELEASE_CHECKLIST.md` section G for that outstanding gate.
 
+## `studio-0.1.0-rc2-*` — commit `05dfdd5`
+
+The candidate produced by the **hardened** release workflow (Prompt 16), i.e. the plumbing
+that would actually publish. Produced by run
+[33790899131](https://github.com/Burrichen/FDraft-Studio/actions/runs/33790899131):
+installer SHA-256 `152dbef6ce2f2a7b44b18e0ba371e655946292c83a0b644bf3bb40fb914ebc25`,
+2,364,286 bytes.
+
+Differences from `rc` above, all of them verification improvements:
+
+- `release-manifest.json` carries the full Prompt 16 field set, including `tag` (`null` here,
+  because a `workflow_dispatch` run has no tag and therefore *cannot* publish — the `publish`
+  job was correctly **skipped**), `workflowRunId`, and the separated
+  `minCompatibleFdraftCommit` / `lastVerifiedFdraftCommit` / `testedFdraftPlatform` fields.
+- `windows-smoke-suite.json` adds the **upgrade/repair** path (re-running the installer over
+  an existing install: exits 0, exactly one uninstall entry and one Start Menu shortcut, the
+  executable retained, and a real probe file inside the install folder preserved) and proves
+  user-data survival against **real files** written into app-data, rather than against a
+  directory the application may never have created during a passive smoke launch.
+- `SHA256SUMS.txt` is LF-terminated and verifies cleanly with `sha256sum -c` — the `rc` set's
+  sidecar was CRLF-terminated, which GNU `sha256sum` rejects with `FAILED open or read`. That
+  bug was found by downloading the artifact and actually running the check, and it would have
+  failed the publish job's own checksum gate on every release.
+
 ### A correction this candidate's manifest carries
 
 `studio-0.1.0-rc-manifest.json` (written by run 33786939789) records a single

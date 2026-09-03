@@ -90,8 +90,11 @@ compatibility exceptions, no reduced/custom structure.
 ## E. Windows installer readiness — verified on real Windows
 
 Superseding this section's earlier "written but never run" state. A real Windows installer
-has now been built and machine-verified. Evidence:
-`docs/releases/candidates/studio-0.1.0-rc-*` (committed verbatim from the run).
+has now been built and machine-verified. Evidence, committed exactly as the runs emitted it:
+`docs/releases/candidates/studio-0.1.0-rc-*` (the first verified build) and
+`studio-0.1.0-rc2-*` (the same, re-verified through the hardened release workflow, plus the
+upgrade/repair path). See that directory's own README for what each set does and does not
+prove.
 
 **Done, with evidence:**
 
@@ -191,6 +194,26 @@ path. It is least-privilege by construction: the workflow defaults to `contents:
 so the `workflow_dispatch` path can build and smoke-test a candidate but can never publish.
 Every action is pinned to a commit SHA, dependencies install from the committed lockfile with
 `--frozen-lockfile`, and the job refuses to overwrite an existing Release.
+
+**The installer is not byte-reproducible — so publish the artifact you tested, never a
+rebuild.** Proven across **three** real runs, from commits `dfc893e`, `686e22c` and
+`05dfdd5`, none of which changed a single application input (`git diff --name-only … --
+apps/studio/src apps/studio/src-tauri packages` returns nothing for any of them — only
+workflow YAML and docs differ). They produced three different installers:
+
+| Commit | Run | Size (bytes) | SHA-256 |
+| --- | --- | --- | --- |
+| `dfc893e` | 33786939789 | 2,364,401 | `5dbcf4b7…17420` |
+| `686e22c` | 33789604464 | 2,366,124 | `56d7b99c…595a` |
+| `05dfdd5` | 33790899131 | 2,364,286 | `152dbef6…bc25` |
+
+Tauri/NSIS embeds build-time metadata, so "rebuild it and compare checksums" is not a valid
+verification strategy here. Everything that *is* configuration-comparable does match across
+all three — application version, lockfile, SDK/renderer versions, theme/project format
+versions, Tauri config, enabled features, architecture, installer format — and the workflow
+checks the identity that actually matters instead: the `publish` job downloads the artifact
+built and smoke-tested by *the same run*, re-verifies its SHA-256, and confirms
+`release-manifest.json` names that exact artifact, tag and commit.
 
 **How to publish, once the outstanding gate below is satisfied:**
 
