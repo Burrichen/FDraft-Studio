@@ -6,13 +6,14 @@
  * FDraft checkout.
  *
  * The Candy Bowl's progress→state mapping needs the `behaviour`
- * capability, which FDraft's current build doesn't declare support for
- * yet (`FDRAFT_SUPPORTED_CAPABILITIES` in
- * ../FDraft/src/infrastructure/theme-runtime/compatibility.ts) — so the
- * publish step below is *expected* to be correctly blocked. That's not a
- * bug in this project; it's FDraft's own real compatibility check doing
- * its job, and is reported, not hidden. See
- * docs/IMPLEMENTATION_STATUS.md's Prompt 13 row for the recorded outcome.
+ * capability. FDraft's real, currently-committed
+ * `FDRAFT_SUPPORTED_CAPABILITIES` now declares it (see
+ * ../FDraft/src/infrastructure/theme-runtime/compatibility.ts, commit
+ * `006035c`) — confirmed live before this project was rebuilt, not
+ * assumed — so the publish step below is expected to succeed. It was
+ * correctly blocked before that commit landed; see
+ * docs/IMPLEMENTATION_STATUS.md rows 13-14 for that earlier, honest
+ * outcome and the investigation that led to closing the gap.
  *
  * Run: pnpm --filter @fdraft/studio exec tsx scripts/build-halloween.ts <workDir> [fdraftRepoPath]
  */
@@ -237,7 +238,9 @@ async function main(): Promise<void> {
   addSimulationScenario(session, "Candy bowl: full", { ...base, optedIn: true, draftGenerated: true, eventCompleted: true, progressPercent: 100, watchedCount: 10, targetCount: 10, description: "Bowl should read Full." });
   addSimulationScenario(session, "Halloween ended", { eventStatus: "ended", eventActive: false, eventAvailable: false, optedIn: true, draftGenerated: true, eventCompleted: true, progressPercent: 100, watchedCount: 10, targetCount: 10, performanceTier: "high", reducedMotion: false, dataProfile: "normal", description: "Event Complete page state." });
 
-  const report = await saveCompileAndReport(session, platform, { slug: "halloween", workDir, fdraftRepoPath });
+  // Official, intentionally re-runnable builder — see build-christmas.ts's
+  // own comment on `confirmSlugOverwrite` for why this is safe here.
+  const report = await saveCompileAndReport(session, platform, { slug: "halloween", workDir, fdraftRepoPath, confirmSlugOverwrite: true });
   assertClean(report, "Halloween");
 }
 

@@ -1,5 +1,5 @@
 /**
- * Phase 4 proof: after importing real Christmas artwork into a Studio
+ * Phase 4 proof: after importing an event's real artwork into a Studio
  * project, deleting the *original* source PNGs must not break the
  * already-built `.fdstudio`/`.fdtheme` — `packFdstudio` embeds asset
  * bytes by content hash directly inside the package (see
@@ -7,11 +7,14 @@
  * project should never need the original file to exist again.
  *
  * This never touches FDraft's real files: it copies the real
- * `public/events/christmas/` tree into a scratch directory, builds from
- * that copy, deletes the copy, then reopens the saved `.fdstudio` and
+ * `public/events/<slug>/` tree into a scratch directory, builds from that
+ * copy, deletes the copy, then reopens the saved `.fdstudio` and
  * recompiles it — proving both steps succeed with the originals gone.
+ * Only Halloween and Christmas import real images (January has none to
+ * delete-test — its "art" is procedural effects/tokens, per its own
+ * build script).
  *
- * Run: pnpm --filter @fdraft/studio exec tsx scripts/verify-delete-sources.ts <scratchDir>
+ * Run: pnpm --filter @fdraft/studio exec tsx scripts/verify-delete-sources.ts <scratchDir> [halloween|christmas]
  */
 import { cp, rm, mkdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -26,26 +29,28 @@ const execFileAsync = promisify(execFile);
 // Resolved relative to this script, per CLAUDE.md's documented sibling-checkout layout
 // (`../FDraft` next to this repository) — never a machine-specific absolute path.
 const STUDIO_ROOT = join(import.meta.dirname, "..");
-const REAL_ASSET_DIR = join(import.meta.dirname, "../../../../FDraft/public/events/christmas");
 
 async function main(): Promise<void> {
   const scratchDir = process.argv[2];
-  if (!scratchDir) throw new Error("Usage: verify-delete-sources.ts <scratchDir>");
+  const slug = process.argv[3] ?? "christmas";
+  if (!scratchDir) throw new Error("Usage: verify-delete-sources.ts <scratchDir> [halloween|christmas]");
+  if (slug !== "halloween" && slug !== "christmas") throw new Error(`Unsupported slug "${slug}" — only halloween/christmas import real images.`);
 
+  const realAssetDir = join(import.meta.dirname, `../../../../FDraft/public/events/${slug}`);
   const sourceCopyDir = join(scratchDir, "source-copy");
   const workDir = join(scratchDir, "build");
   await mkdir(sourceCopyDir, { recursive: true });
   await mkdir(workDir, { recursive: true });
 
-  console.log(`Copying real assets ${REAL_ASSET_DIR} -> ${sourceCopyDir} (read-only copy, originals untouched)...`);
-  await cp(REAL_ASSET_DIR, sourceCopyDir, { recursive: true });
+  console.log(`Copying real assets ${realAssetDir} -> ${sourceCopyDir} (read-only copy, originals untouched)...`);
+  await cp(realAssetDir, sourceCopyDir, { recursive: true });
 
-  console.log("Building Christmas from the scratch copy (no publish — this is an isolated proof, not a re-publish)...");
-  await execFileAsync("node_modules/.bin/tsx", ["scripts/build-christmas.ts", workDir, "", sourceCopyDir], {
+  console.log(`Building ${slug} from the scratch copy (no publish — this is an isolated proof, not a re-publish)...`);
+  await execFileAsync("node_modules/.bin/tsx", [`scripts/build-${slug}.ts`, workDir, "", sourceCopyDir], {
     cwd: STUDIO_ROOT,
   });
 
-  const fdstudioPath = join(workDir, "christmas.fdstudio");
+  const fdstudioPath = join(workDir, `${slug}.fdstudio`);
   console.log(`Built ${fdstudioPath}. Deleting the scratch source copy entirely...`);
   await rm(sourceCopyDir, { recursive: true, force: true });
 

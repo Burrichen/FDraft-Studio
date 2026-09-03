@@ -4,30 +4,27 @@
  * this set "a scaffold only — placeholder-quality," not final creative;
  * recorded here honestly, not claimed as approved final art).
  *
- * Unlike the Halloween/January scripts, this one deliberately does NOT
- * start from `createFdraftDefaultEventProject` — that template places 14
- * component keys, but FDraft's real, currently-committed
- * `FDRAFT_SUPPORTED_COMPONENT_KEYS` only has adapters for 7 of them
- * (confirmed live against ../FDraft/src/infrastructure/theme-runtime/
- * compatibility.ts while building Halloween — a real, previously-
- * undocumented gap between Studio's template contract and FDraft's actual
- * adapter coverage, recorded in docs/IMPLEMENTATION_STATUS.md as a
- * dogfooding finding, not silently routed around). This project is built
- * from a custom, compatibility-scoped page set using only the 7 keys
- * FDraft actually supports today (`page-title`, `event-information`,
- * `event-countdown`, `draft-controls`, `film-grid`, `event-progress`,
- * `points-counter`) plus `masters`/`popups` — so this is the one event
- * proven to actually publish successfully, end to end, right now.
+ * Now built from the FULL "FDraft Default Event" template
+ * (`startFromDefaultTemplate`, all 14 component keys across 8 pages) —
+ * the temporary compatibility-scoped 7-key structure this project used
+ * before is gone. FDraft's real, currently-committed
+ * `FDRAFT_SUPPORTED_COMPONENT_KEYS` now covers all 14 (see
+ * ../FDraft/src/infrastructure/theme-runtime/compatibility.ts, commit
+ * `006035c`) — confirmed live before this migration, not assumed. The
+ * original visual appearance and event behaviour are preserved exactly:
+ * the same real decorative imagery in the same positions, the same
+ * copy tone, the same simulator scenarios — only the underlying page/
+ * component structure changed, from a reduced custom set to the real,
+ * complete, official template.
  *
  * Run: pnpm --filter @fdraft/studio exec tsx scripts/build-christmas.ts <workDir> [fdraftRepoPath]
  */
 import { join } from "node:path";
 import {
   createSession,
+  startFromDefaultTemplate,
   project,
-  addPage,
   addPopup,
-  addComponentRequirement,
   addComponentLayer,
   addImageLayer,
   importAssetFile,
@@ -38,11 +35,10 @@ import {
   getContainerLayers,
   type ContainerRef,
 } from "./starterEventBuilder.js";
-import { renamePage } from "../src/project/containerCommands.js";
 
 // Resolved relative to this script, per CLAUDE.md's documented sibling-checkout layout
 // (`../FDraft` next to this repository) — never a machine-specific absolute path.
-// argv[4] lets the delete-original-sources proof (Phase 4) point this at a scratch
+// argv[4] lets the delete-original-sources proof point this at a scratch
 // copy instead of FDraft's real checkout, so the copy can be safely deleted afterward.
 const ASSET_DIR = process.argv[4] ?? join(import.meta.dirname, "../../../../FDraft/public/events/christmas");
 
@@ -52,56 +48,25 @@ async function main(): Promise<void> {
   if (!workDir) throw new Error("Usage: build-christmas.ts <workDir> [fdraftRepoPath]");
 
   const { session, platform } = await createSession(workDir);
-  session.newProject("Christmas");
-  const homePage = project(session).pages[0]!;
-  const renameCmd = renamePage(project(session), homePage.id, "Event Landing");
-  if (renameCmd) session.applyCommand(renameCmd);
-  const landing: ContainerRef = { kind: "page", id: homePage.id };
+  startFromDefaultTemplate(session, "Christmas");
 
-  // ---- Component requirements: only FDraft's real, currently-supported 7 keys ----
-  addComponentRequirement(session, "page-title", { required: true });
-  addComponentRequirement(session, "event-information", { required: true });
-  addComponentRequirement(session, "event-countdown", { required: true });
-  addComponentRequirement(session, "draft-controls", { required: true });
-  addComponentRequirement(session, "film-grid", { required: true });
-  addComponentRequirement(session, "event-progress", { required: true });
-  addComponentRequirement(session, "points-counter", { required: true });
+  const pageRef = (name: string): ContainerRef => ({ kind: "page", id: project(session).pages.find((p) => p.name === name)!.id });
+  function titleLayerId(ref: ContainerRef) {
+    return getContainerLayers(project(session), ref).find((l) => l.type === "component" && l.componentKey === "page-title")!.id;
+  }
+  function componentLayerId(ref: ContainerRef, componentKey: string) {
+    return getContainerLayers(project(session), ref).find((l) => l.type === "component" && l.componentKey === componentKey)!.id;
+  }
 
-  // ---- Pages ----
-  const draftPage = addPage(session, "Draft");
-  const resultsPage = addPage(session, "Results");
-  const completionPage = addPage(session, "Completion");
-  const aboutPage = addPage(session, "About/Information");
-  const availablePage = addPage(session, "Event Available");
-  const joinPopup = addPopup(session, "Join");
+  const landing = pageRef("Event Landing");
 
-  addComponentLayer(session, landing, { name: "Title", componentKey: "page-title", transform: { x: 660, y: 120, width: 600, height: 100, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
-  addComponentLayer(session, landing, { name: "Info", componentKey: "event-information", transform: { x: 660, y: 250, width: 600, height: 100, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
-  addComponentLayer(session, landing, { name: "Countdown", componentKey: "event-countdown", transform: { x: 660, y: 380, width: 600, height: 80, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
+  // ---- Event Available / Join popup — mirrors Halloween's own real popup pattern ----
+  const availablePopup = addPopup(session, "Event Available");
+  addComponentLayer(session, availablePopup, { name: "Popup Title", componentKey: "page-title", transform: { x: 460, y: 300, width: 1000, height: 100, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
+  addComponentLayer(session, availablePopup, { name: "Popup Info", componentKey: "event-information", transform: { x: 460, y: 430, width: 1000, height: 140, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
+  addComponentLayer(session, availablePopup, { name: "Popup Join Action", componentKey: "generate-draft-action", transform: { x: 810, y: 620, width: 300, height: 70, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
 
-  addComponentLayer(session, draftPage, { name: "Title", componentKey: "page-title", transform: { x: 660, y: 100, width: 600, height: 100, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
-  addComponentLayer(session, draftPage, { name: "Films", componentKey: "film-grid", transform: { x: 460, y: 240, width: 1000, height: 560, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
-  addComponentLayer(session, draftPage, { name: "Controls", componentKey: "draft-controls", transform: { x: 660, y: 850, width: 600, height: 80, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
-
-  addComponentLayer(session, resultsPage, { name: "Title", componentKey: "page-title", transform: { x: 660, y: 150, width: 600, height: 100, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
-  addComponentLayer(session, resultsPage, { name: "Progress", componentKey: "event-progress", transform: { x: 660, y: 300, width: 600, height: 60, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
-  addComponentLayer(session, resultsPage, { name: "Points", componentKey: "points-counter", transform: { x: 660, y: 420, width: 600, height: 80, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
-
-  addComponentLayer(session, completionPage, { name: "Title", componentKey: "page-title", transform: { x: 660, y: 150, width: 600, height: 100, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
-  addComponentLayer(session, completionPage, { name: "Progress", componentKey: "event-progress", transform: { x: 660, y: 300, width: 600, height: 60, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
-  addComponentLayer(session, completionPage, { name: "Points", componentKey: "points-counter", transform: { x: 660, y: 420, width: 600, height: 80, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
-
-  addComponentLayer(session, aboutPage, { name: "Title", componentKey: "page-title", transform: { x: 660, y: 150, width: 600, height: 100, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
-  addComponentLayer(session, aboutPage, { name: "Info", componentKey: "event-information", transform: { x: 660, y: 280, width: 600, height: 140, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
-
-  addComponentLayer(session, availablePage, { name: "Title", componentKey: "page-title", transform: { x: 660, y: 150, width: 600, height: 100, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
-  addComponentLayer(session, availablePage, { name: "Info", componentKey: "event-information", transform: { x: 660, y: 280, width: 600, height: 100, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
-  addComponentLayer(session, availablePage, { name: "Countdown", componentKey: "event-countdown", transform: { x: 660, y: 400, width: 600, height: 80, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
-
-  addComponentLayer(session, joinPopup, { name: "Title", componentKey: "page-title", transform: { x: 460, y: 300, width: 1000, height: 100, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
-  addComponentLayer(session, joinPopup, { name: "Info", componentKey: "event-information", transform: { x: 460, y: 430, width: 1000, height: 140, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 1 });
-
-  // ---- Real imported artwork, decorative, positioned as a general "cozy scene" — no CSS/layout code copied, only Studio's own layer/transform model ----
+  // ---- Real imported artwork, decorative, positioned exactly as before — same "cozy scene," no CSS/layout code, only Studio's own layer/transform model ----
   const tree = await importAssetFile(session, join(ASSET_DIR, "interactives/christmas-tree.png"));
   const presents = await importAssetFile(session, join(ASSET_DIR, "interactives/presents.png"));
   const snowman = await importAssetFile(session, join(ASSET_DIR, "interactives/snowman.png"));
@@ -117,57 +82,100 @@ async function main(): Promise<void> {
   addImageLayer(session, landing, { name: "Stocking", assetId: stocking, transform: { x: 1720, y: 750, width: 180, height: 252, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 0 });
   addImageLayer(session, landing, { name: "Candy Canes", assetId: candyCanes, transform: { x: 40, y: 40, width: 120, height: 160, rotationDeg: -15, scaleX: 1, scaleY: 1 }, zIndex: 0 });
   addImageLayer(session, landing, { name: "Fairy Lights", assetId: fairyLights, transform: { x: 660, y: 0, width: 600, height: 144, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 0 });
-  addImageLayer(session, joinPopup, { name: "Modal Left", assetId: modalLeft, transform: { x: 0, y: 480, width: 260, height: 400, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 0 });
-  addImageLayer(session, joinPopup, { name: "Modal Right", assetId: modalRight, transform: { x: 1660, y: 480, width: 260, height: 400, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 0 });
+  addImageLayer(session, availablePopup, { name: "Modal Left", assetId: modalLeft, transform: { x: 0, y: 480, width: 260, height: 400, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 0 });
+  addImageLayer(session, availablePopup, { name: "Modal Right", assetId: modalRight, transform: { x: 1660, y: 480, width: 260, height: 400, rotationDeg: 0, scaleX: 1, scaleY: 1 }, zIndex: 0 });
 
-  // ---- Deliberate copy on every real slot ----
-  function componentLayerId(ref: ContainerRef, componentKey: string) {
-    return getContainerLayers(project(session), ref).find((l) => l.type === "component" && l.componentKey === componentKey)!.id;
-  }
+  // ---- Deliberate copy on every real slot — the same Christmas tone as before, now covering every one of the 14 real components ----
 
-  setCopy(session, landing, componentLayerId(landing, "page-title"), "title", "A Cozy Christmas");
+  // Event Landing
+  setCopy(session, landing, titleLayerId(landing), "title", "A Cozy Christmas");
   setCopy(session, landing, componentLayerId(landing, "event-information"), "eventName", "{{eventName}}");
   setCopy(session, landing, componentLayerId(landing, "event-information"), "dateRange", "Runs through the holidays — watch, and warm up by the tree");
   setCopy(session, landing, componentLayerId(landing, "event-countdown"), "accessibleLabel", "Time left in the Christmas event");
+  setCopy(session, landing, componentLayerId(landing, "profile-badge"), "accessibleLabel", "Your Christmas profile");
+  setCopy(session, landing, componentLayerId(landing, "event-navigation"), "previousLabel", "Back");
+  setCopy(session, landing, componentLayerId(landing, "event-navigation"), "nextLabel", "Onward");
+  setCopy(session, landing, componentLayerId(landing, "event-navigation"), "accessibleLabel", "Christmas event navigation");
+  setCopy(session, landing, componentLayerId(landing, "generate-draft-action"), "actionLabel", "Start My Watchlist");
+  setCopy(session, landing, componentLayerId(landing, "generate-draft-action"), "accessibleLabel", "Generate my Christmas film draft");
 
-  setCopy(session, draftPage, componentLayerId(draftPage, "page-title"), "title", "Trim Your Watchlist");
-  setCopy(session, draftPage, componentLayerId(draftPage, "draft-controls"), "skipLabel", "Not Feeling Festive");
-  setCopy(session, draftPage, componentLayerId(draftPage, "draft-controls"), "confirmLabel", "Add To Stocking");
-  setCopy(session, draftPage, componentLayerId(draftPage, "draft-controls"), "accessibleLabel", "Confirm your Christmas film pick");
+  // Draft
+  const draft = pageRef("Draft");
+  setCopy(session, draft, titleLayerId(draft), "title", "Trim Your Watchlist");
+  setCopy(session, draft, componentLayerId(draft, "draft-progress"), "statusLabel", "{{picksMade}} of {{totalPicks}} picks wrapped");
+  setCopy(session, draft, componentLayerId(draft, "draft-controls"), "skipLabel", "Not Feeling Festive");
+  setCopy(session, draft, componentLayerId(draft, "draft-controls"), "confirmLabel", "Add To Stocking");
+  setCopy(session, draft, componentLayerId(draft, "draft-controls"), "accessibleLabel", "Confirm your Christmas film pick");
 
-  setCopy(session, resultsPage, componentLayerId(resultsPage, "page-title"), "title", "Under The Tree So Far");
-  setCopy(session, resultsPage, componentLayerId(resultsPage, "event-progress"), "statusLabel", "{{progress}}% unwrapped");
-  setCopy(session, resultsPage, componentLayerId(resultsPage, "event-progress"), "accessibleLabel", "Christmas event progress");
-  setCopy(session, resultsPage, componentLayerId(resultsPage, "points-counter"), "unitLabel", "candy cane pts");
-  setCopy(session, resultsPage, componentLayerId(resultsPage, "points-counter"), "accessibleLabel", "Your Christmas points");
+  // Results
+  const results = pageRef("Results");
+  setCopy(session, results, titleLayerId(results), "title", "Under The Tree So Far");
+  setCopy(session, results, componentLayerId(results, "results-completion-content"), "headline", "Making good progress!");
+  setCopy(session, results, componentLayerId(results, "results-completion-content"), "body", "Keep watching and the stocking keeps filling.");
+  setCopy(session, results, componentLayerId(results, "points-counter"), "unitLabel", "candy cane pts");
+  setCopy(session, results, componentLayerId(results, "points-counter"), "accessibleLabel", "Your Christmas points");
 
-  setCopy(session, completionPage, componentLayerId(completionPage, "page-title"), "title", "All Wrapped Up");
-  setCopy(session, completionPage, componentLayerId(completionPage, "event-progress"), "statusLabel", "100% unwrapped — happy holidays!");
-  setCopy(session, completionPage, componentLayerId(completionPage, "event-progress"), "accessibleLabel", "Christmas event completion");
-  setCopy(session, completionPage, componentLayerId(completionPage, "points-counter"), "unitLabel", "candy cane pts");
-  setCopy(session, completionPage, componentLayerId(completionPage, "points-counter"), "accessibleLabel", "Your final Christmas points");
+  // Completion
+  const completion = pageRef("Completion");
+  setCopy(session, completion, titleLayerId(completion), "title", "All Wrapped Up");
+  setCopy(session, completion, componentLayerId(completion, "results-completion-content"), "headline", "Happy holidays!");
+  setCopy(session, completion, componentLayerId(completion, "results-completion-content"), "body", "You've watched every pick — thanks for spending {{eventName}} with us.");
+  setCopy(session, completion, componentLayerId(completion, "complete-watch-action"), "actionLabel", "Mark as Watched");
+  setCopy(session, completion, componentLayerId(completion, "complete-watch-action"), "accessibleLabel", "Mark this Christmas film as watched");
 
-  setCopy(session, aboutPage, componentLayerId(aboutPage, "page-title"), "title", "About This Christmas");
-  setCopy(session, aboutPage, componentLayerId(aboutPage, "event-information"), "eventName", "{{eventName}}");
-  setCopy(session, aboutPage, componentLayerId(aboutPage, "event-information"), "dateRange", "A season of cozy films — no naughty list, just good picks");
+  // About/Information
+  const about = pageRef("About/Information");
+  setCopy(session, about, titleLayerId(about), "title", "About This Christmas");
+  setCopy(session, about, componentLayerId(about, "event-information"), "eventName", "{{eventName}}");
+  setCopy(session, about, componentLayerId(about, "event-information"), "dateRange", "A season of cozy films — no naughty list, just good picks");
 
-  setCopy(session, availablePage, componentLayerId(availablePage, "page-title"), "title", "Christmas Is Coming");
-  setCopy(session, availablePage, componentLayerId(availablePage, "event-information"), "eventName", "{{eventName}}");
-  setCopy(session, availablePage, componentLayerId(availablePage, "event-information"), "dateRange", "Not open yet — hang your stocking and wait");
-  setCopy(session, availablePage, componentLayerId(availablePage, "event-countdown"), "accessibleLabel", "Time until Christmas opens");
+  // Event Available
+  const available = pageRef("Event Available");
+  setCopy(session, available, titleLayerId(available), "title", "Christmas Is Coming");
+  setCopy(session, available, componentLayerId(available, "event-information"), "eventName", "{{eventName}}");
+  setCopy(session, available, componentLayerId(available, "event-information"), "dateRange", "Not open yet — hang your stocking and wait");
+  setCopy(session, available, componentLayerId(available, "event-countdown"), "accessibleLabel", "Time until Christmas opens");
+  setCopy(session, available, componentLayerId(available, "challenge-card"), "title", "Cocoa & a Classic");
+  setCopy(session, available, componentLayerId(available, "challenge-card"), "description", "Watch 3 festive picks this weekend for a bonus handful of candy canes.");
 
-  setCopy(session, joinPopup, componentLayerId(joinPopup, "page-title"), "title", "Christmas Is Here!");
-  setCopy(session, joinPopup, componentLayerId(joinPopup, "event-information"), "eventName", "{{eventName}}");
-  setCopy(session, joinPopup, componentLayerId(joinPopup, "event-information"), "dateRange", "Opt in from your profile to start unwrapping films");
+  // Join
+  const joinPage = pageRef("Join");
+  setCopy(session, joinPage, titleLayerId(joinPage), "title", "Christmas Is Here!");
+  setCopy(session, joinPage, componentLayerId(joinPage, "event-information"), "eventName", "{{eventName}}");
+  setCopy(session, joinPage, componentLayerId(joinPage, "event-information"), "dateRange", "Opt in from your profile to start unwrapping films");
+  setCopy(session, joinPage, componentLayerId(joinPage, "generate-draft-action"), "actionLabel", "Add To Stocking");
+  setCopy(session, joinPage, componentLayerId(joinPage, "generate-draft-action"), "accessibleLabel", "Join the Christmas event");
 
-  // ---- Saved simulator scenarios ----
+  // Event Complete
+  const complete = pageRef("Event Complete");
+  setCopy(session, complete, titleLayerId(complete), "title", "Christmas Has Ended");
+  setCopy(session, complete, componentLayerId(complete, "results-completion-content"), "headline", "That's a wrap.");
+  setCopy(session, complete, componentLayerId(complete, "results-completion-content"), "body", "The stockings are empty and the tree's coming down — see you next Christmas.");
+  setCopy(session, complete, componentLayerId(complete, "points-counter"), "unitLabel", "candy cane pts");
+  setCopy(session, complete, componentLayerId(complete, "points-counter"), "accessibleLabel", "Your final Christmas points");
+  setCopy(session, complete, componentLayerId(complete, "event-points-counter"), "unitLabel", "candy cane pts");
+  setCopy(session, complete, componentLayerId(complete, "event-points-counter"), "accessibleLabel", "Your points for this Christmas event");
+
+  // Event Available popup
+  setCopy(session, availablePopup, titleLayerId(availablePopup), "title", "Christmas Is Open!");
+  setCopy(session, availablePopup, componentLayerId(availablePopup, "event-information"), "eventName", "{{eventName}}");
+  setCopy(session, availablePopup, componentLayerId(availablePopup, "event-information"), "dateRange", "Opt in now — the tree is lit and waiting");
+  setCopy(session, availablePopup, componentLayerId(availablePopup, "generate-draft-action"), "actionLabel", "Let's Go");
+  setCopy(session, availablePopup, componentLayerId(availablePopup, "generate-draft-action"), "accessibleLabel", "Join the Christmas event now");
+
+  // ---- Saved simulator scenarios — identical to before ----
   const base = { eventStatus: "active", eventActive: true, eventAvailable: true, performanceTier: "high" as const, reducedMotion: false, dataProfile: "normal" as const };
   addSimulationScenario(session, "Not opted in yet", { ...base, optedIn: false, draftGenerated: false, eventCompleted: false, progressPercent: 0, watchedCount: 0, targetCount: 8 });
   addSimulationScenario(session, "Midway through", { ...base, optedIn: true, draftGenerated: true, eventCompleted: false, progressPercent: 50, watchedCount: 4, targetCount: 8 });
   addSimulationScenario(session, "All wrapped up", { ...base, optedIn: true, draftGenerated: true, eventCompleted: true, progressPercent: 100, watchedCount: 8, targetCount: 8 });
   addSimulationScenario(session, "Christmas ended", { eventStatus: "ended", eventActive: false, eventAvailable: false, optedIn: true, draftGenerated: true, eventCompleted: true, progressPercent: 100, watchedCount: 8, targetCount: 8, performanceTier: "high", reducedMotion: false, dataProfile: "normal" });
 
-  const report = await saveCompileAndReport(session, platform, { slug: "christmas", workDir, fdraftRepoPath });
+  // `confirmSlugOverwrite: true` — this is the SAME official Christmas
+  // project being deliberately migrated off its temporary 7-key
+  // structure onto the full template (per its own header comment), not a
+  // different project colliding on the same slug. This official builder
+  // is expected to be re-run as the canonical Christmas source evolves.
+  const report = await saveCompileAndReport(session, platform, { slug: "christmas", workDir, fdraftRepoPath, confirmSlugOverwrite: true });
   assertClean(report, "Christmas");
 }
 

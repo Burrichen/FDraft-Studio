@@ -271,8 +271,24 @@ export interface BuildReport {
  * reported, not hidden: this is expected and correct for a project using
  * a capability FDraft's current build doesn't support yet (see the
  * per-event scripts' own notes).
+ *
+ * `confirmSlugOverwrite` mirrors `PublishToFDraftPanel.tsx`'s own real
+ * "I understand this will overwrite a different project" checkbox — the
+ * gate lives entirely in the CALLER (`executePublish` itself never
+ * re-checks `plan.blocked`, by design, since re-running the check risks
+ * racing an edit made between plan and confirm), so a headless driver
+ * must implement the identical gate itself, never bypass it silently.
+ * Pass `true` only when you have deliberately confirmed the existing
+ * published project at that slug is the SAME conceptual project being
+ * intentionally republished/migrated (e.g. Christmas's move off its
+ * temporary 7-key structure) — never to route around a genuine
+ * different-project collision.
  */
-export async function saveCompileAndReport(session: ProjectSession, platform: ReturnType<typeof createNodeTestPlatform>, opts: { slug: string; workDir: string; fdraftRepoPath?: string }): Promise<BuildReport> {
+export async function saveCompileAndReport(
+  session: ProjectSession,
+  platform: ReturnType<typeof createNodeTestPlatform>,
+  opts: { slug: string; workDir: string; fdraftRepoPath?: string; confirmSlugOverwrite?: boolean },
+): Promise<BuildReport> {
   const doc = project(session);
   const validation = validateProject(doc);
   const warnings = checkDesignWarnings(doc);
@@ -298,7 +314,10 @@ export async function saveCompileAndReport(session: ProjectSession, platform: Re
     const plan = await planPublish(platform, opts.fdraftRepoPath, open);
     report.publish.attempted = true;
     report.publish.plan = plan;
-    if (plan.blocked.length === 0) {
+    const hardBlocks = plan.blocked.filter((b) => b.kind !== "slugCollision");
+    const slugCollision = plan.blocked.find((b) => b.kind === "slugCollision");
+    const canPublish = hardBlocks.length === 0 && (!slugCollision || opts.confirmSlugOverwrite === true);
+    if (canPublish) {
       report.publish.result = await executePublish(platform, opts.fdraftRepoPath, plan);
     } else {
       report.publish.blockedReasons = plan.blocked.map((b) => JSON.stringify(b));
