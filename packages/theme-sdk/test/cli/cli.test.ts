@@ -10,7 +10,16 @@ const cliEntry = join(packageRoot, "src/cli.ts");
 const sampleFixtureDir = fileURLToPath(new URL("../../../../fixtures/projects/sample-event", import.meta.url));
 
 function runCli(args: string[]): { stdout: string; stderr: string; status: number } {
-  const result = spawnSync("npx", ["tsx", cliEntry, ...args], { cwd: packageRoot, encoding: "utf8" });
+  // Windows can't CreateProcess a `.cmd` shim (what `npx`/`tsx` resolve to
+  // there) directly — spawnSync silently fails to launch anything at all
+  // without `shell: true`, producing empty stdout/stderr and a misleading
+  // non-zero status rather than a clear spawn error. POSIX doesn't need
+  // (or want) the extra shell hop, so this stays platform-conditional.
+  const result = spawnSync("npx", ["tsx", cliEntry, ...args], {
+    cwd: packageRoot,
+    encoding: "utf8",
+    shell: process.platform === "win32",
+  });
   return { stdout: result.stdout ?? "", stderr: result.stderr ?? "", status: result.status ?? 1 };
 }
 

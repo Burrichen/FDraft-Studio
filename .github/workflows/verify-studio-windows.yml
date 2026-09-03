@@ -126,7 +126,129 @@ jobs:
           echo "artifact_name=$artifactName" >> $env:GITHUB_OUTPUT
           echo "sha256=$hash" >> $env:GITHUB_OUTPUT
 
+      # Scriptable slice of the packaged-application verification checklist:
+      # everything a headless windows-latest runner can actually prove
+      # (silent install, registry/shortcut/file presence, a launch smoke
+      # check, silent uninstall, and that uninstall never removes user
+      # app-data). What this CANNOT prove — real SmartScreen dialog
+      # wording, visual Start Menu/taskbar icon rendering, human-driven
+      # GUI walkthroughs — is left unverified here and reported as such,
+      # not fabricated.
+      - name: Verify silent install, launch smoke-check, and silent uninstall
+        id: install-verify
+        shell: pwsh
+        env:
+          ARTIFACT_NAME: ${{ steps.package.outputs.artifact_name }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $artifactPath = (Resolve-Path "dist-release/$env:ARTIFACT_NAME").Path
+          $appVersion = (node -p "require('./apps/studio/package.json').version")
+          $results = [ordered]@{}
+
+          function Check([string]$name, [bool]$condition) {
+            $script:results[$name] = $condition
+            if (-not $condition) { Write-Host "::error::Verification check failed: $name" }
+            else { Write-Host "OK: $name" }
+          }
+
+          function Find-UninstallEntry {
+            $roots = @(
+              "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
+              "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
+              "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+            )
+            Get-ItemProperty -Path $roots -ErrorAction SilentlyContinue |
+              Where-Object { $_.DisplayName -eq "FDraft Studio" } | Select-Object -First 1
+          }
+
+          # --- Silent install. installMode is "currentUser" (tauri.conf.json), so
+          # no elevation prompt and no admin rights are needed — matches the
+          # requirement that Studio avoid admin access unless technically necessary. ---
+          $proc = Start-Process -FilePath $artifactPath -ArgumentList "/S" -PassThru -Wait
+          Check "silent install process exits 0" ($proc.ExitCode -eq 0)
+
+          # NSIS's outer stub can return before the real install work (registry
+          # writes, shortcut creation) is fully committed — poll briefly rather
+          # than trusting a single immediate read.
+          $entry = $null
+          for ($i = 0; $i -lt 10 -and -not $entry; $i++) {
+            $entry = Find-UninstallEntry
+            if (-not $entry) { Start-Sleep -Seconds 1 }
+          }
+          Check "uninstall registry entry created" ($null -ne $entry)
+
+          $installLocation = $null
+          $exePath = $null
+          if ($entry) {
+            Check "registry DisplayVersion matches app version ($appVersion)" ($entry.DisplayVersion -eq $appVersion)
+            Check "registry Publisher identifies Studio, not FDraft" ($entry.Publisher -eq "FDraft Studio")
+            $installLocation = $entry.InstallLocation
+            Check "InstallLocation reported in registry" (![string]::IsNullOrWhiteSpace($installLocation))
+            if ($installLocation) {
+              $exePath = Join-Path $installLocation "fdraft-studio.exe"
+              Check "installed executable exists at InstallLocation" (Test-Path $exePath)
+            }
+          }
+
+          # currentUser install => per-user Start Menu, not the All Users one.
+          $startMenuDir = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs"
+          $shortcut = Get-ChildItem -Path $startMenuDir -Filter "FDraft Studio*.lnk" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          Check "Start Menu shortcut created" ($null -ne $shortcut)
+
+          # --- Launch smoke check: does the installed exe start and survive briefly? ---
+          if ($exePath -and (Test-Path $exePath)) {
+            $appProc = Start-Process -FilePath $exePath -PassThru
+            Start-Sleep -Seconds 10
+            $stillRunning = -not $appProc.HasExited
+            Check "installed app launches and stays running 10s (no immediate crash)" $stillRunning
+            if ($stillRunning) { Stop-Process -Id $appProc.Id -Force -ErrorAction SilentlyContinue }
+          } else {
+            Check "installed app launches and stays running 10s (no immediate crash)" $false
+          }
+
+          # Studio's own, separate app-data namespace (identifier
+          # com.fdraftstudio.app) — never FDraft's own com.burrichen.fdraft.
+          $studioAppData = "$env:APPDATA\com.fdraftstudio.app"
+          Start-Sleep -Seconds 2
+          Check "Studio app-data directory uses its own identifier namespace, distinct from FDraft's" (Test-Path $studioAppData)
+
+          # --- Silent uninstall ---
+          if ($entry -and $entry.UninstallString) {
+            $uninstallExe = ($entry.UninstallString -replace '^"([^"]+)".*$', '$1')
+            $uninstallProc = Start-Process -FilePath $uninstallExe -ArgumentList "/S" -PassThru -Wait
+            Check "silent uninstall process exits 0" ($uninstallProc.ExitCode -eq 0)
+
+            $entryAfter = $null
+            for ($i = 0; $i -lt 10; $i++) {
+              $entryAfter = Find-UninstallEntry
+              if (-not $entryAfter) { break }
+              Start-Sleep -Seconds 1
+            }
+            Check "uninstall registry entry removed" ($null -eq $entryAfter)
+            Check "installed executable removed after uninstall" (-not (Test-Path $exePath))
+            $shortcutAfter = Get-ChildItem -Path $startMenuDir -Filter "FDraft Studio*.lnk" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            Check "Start Menu shortcut removed after uninstall" ($null -eq $shortcutAfter)
+          } else {
+            Check "uninstall registry entry had a UninstallString to run" $false
+          }
+
+          # User data must never be deleted by uninstall. This project's pinned
+          # @tauri-apps/cli (2.11.4) NsisConfig schema has no delete-app-data
+          # option at all (confirmed by reading its own config.schema.json
+          # directly — not assumed from docs), so nothing could enable this even
+          # by mistake; confirm it empirically for this exact build too.
+          Check "app-data directory survives uninstall" (Test-Path $studioAppData)
+
+          $results | ConvertTo-Json | Out-File -FilePath "dist-release/install-verification.json" -Encoding utf8
+          Get-Content "dist-release/install-verification.json"
+
+          if ($results.Values -contains $false) {
+            Write-Host "::error::One or more install/uninstall verification checks failed."
+            exit 1
+          }
+
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: fdraft-studio-windows-installer
           path: dist-release/

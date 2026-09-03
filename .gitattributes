@@ -1,0 +1,30 @@
+# Force LF on checkout regardless of the checking-out machine's own
+# core.autocrlf — discovered as a real bug via Prompt 15's Windows CI run:
+# GitHub's windows-latest runners default core.autocrlf=true, which was
+# silently rewriting every committed text file's line endings to CRLF on
+# checkout with no .gitattributes here to override it. That broke content-
+# hash manifest verification for every packaged fixture (project.json's
+# checked-out byte count no longer matched its manifest-declared size/hash)
+# — the exact class of bug this project's own CLAUDE.md calls out as a
+# first-class test case, just not yet exercised on real Windows until now.
+# A real Windows contributor with Git for Windows' own default
+# core.autocrlf=true would have hit the identical corruption locally.
+* text=auto eol=lf
+
+# Known binary formats — never subject to any line-ending processing, even
+# under text=auto's own (generally reliable, but not infallible) heuristic
+# detection. .fdstudio/.fdtheme are packaged ZIP archives whose content-hash
+# manifest verification depends on exact byte-for-byte integrity.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.fdstudio binary
+*.fdtheme binary
+*.zip binary
