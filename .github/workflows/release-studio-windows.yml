@@ -210,7 +210,19 @@ jobs:
           $size = (Get-Item $artifactPath).Length
           # sha256sum-compatible format, so `sha256sum -c SHA256SUMS.txt` and
           # PowerShell's Get-FileHash both work for a downloader.
-          "$hash  $artifactName" | Out-File -FilePath (Join-Path $outDir "SHA256SUMS.txt") -Encoding ascii
+          #
+          # Written via .NET rather than Out-File deliberately: Out-File
+          # terminates the line with CRLF on Windows, and GNU sha256sum then
+          # reads the filename with a trailing \r and reports "FAILED open or
+          # read" for a file that is actually perfectly fine. That bug was
+          # caught by running `sha256sum -c` against a really-downloaded
+          # artifact — a green build alone would never have surfaced it, and it
+          # would have failed the publish job's own checksum gate on every
+          # release. UTF8Encoding($false) also guarantees no BOM.
+          $sumsPath = Join-Path $outDir "SHA256SUMS.txt"
+          [System.IO.File]::WriteAllText($sumsPath, "$hash  $artifactName`n", [System.Text.UTF8Encoding]::new($false))
+          $sumsBytes = [System.IO.File]::ReadAllBytes($sumsPath)
+          if ($sumsBytes -contains 13) { throw "SHA256SUMS.txt contains a CR byte; sha256sum -c would fail to open the listed file." }
 
           $tag = if ($env:GITHUB_REF_TYPE -eq "tag") { $env:GITHUB_REF_NAME } else { $null }
 
