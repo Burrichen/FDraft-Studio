@@ -56,6 +56,22 @@ const PERFORMANCE_TIERS: HostSettings["performanceTier"][] = ["low", "medium", "
 
 const EVENTS = ["halloween", "christmas", "january"] as const;
 
+// build-halloween.ts/build-christmas.ts default their real ASSET_DIR to the
+// real sibling ../FDraft checkout when no 4th argv is given — fine for a
+// local dev machine with that checkout present, but a real, previously-
+// unnoticed hermeticity bug for CI (this whole file's own header comment
+// already claimed hermeticity for the publish side; the asset side simply
+// never was, and both the ordinary Linux CI job and this Windows work
+// exposed it with an ENOENT for real Halloween/Christmas art that doesn't
+// exist on any CI runner). Point at small, genuine, synthetic placeholder
+// PNGs at the exact relative paths each build script expects instead —
+// content-wise, decorative, uncommitted "art" was never this test's
+// concern; the real, deliberately-scoped project structure it builds is.
+const SYNTHETIC_ASSET_DIR: Partial<Record<(typeof EVENTS)[number], string>> = {
+  halloween: join(import.meta.dirname, "../fixtures/starter-event-assets/halloween"),
+  christmas: join(import.meta.dirname, "../fixtures/starter-event-assets/christmas"),
+};
+
 /**
  * Byte-for-byte the real content of FDraft's own
  * `src/infrastructure/theme-runtime/installed-versions.generated.ts` and
@@ -121,7 +137,10 @@ beforeAll(async () => {
   for (const slug of EVENTS) {
     const eventWorkDir = join(workDir, slug);
     await mkdir(eventWorkDir, { recursive: true });
-    const { stdout } = await execFileAsync(process.execPath, [tsxCliPath, `scripts/build-${slug}.ts`, eventWorkDir, fdraftFixtureRepo], { cwd: STUDIO_ROOT });
+    const args = [tsxCliPath, `scripts/build-${slug}.ts`, eventWorkDir, fdraftFixtureRepo];
+    const assetDir = SYNTHETIC_ASSET_DIR[slug];
+    if (assetDir) args.push(assetDir);
+    const { stdout } = await execFileAsync(process.execPath, args, { cwd: STUDIO_ROOT });
     builtSlugs[slug] = { fdstudioPath: join(eventWorkDir, `${slug}.fdstudio`), fdthemePath: join(eventWorkDir, `${slug}.fdtheme`), publishStdout: stdout };
   }
 }, 120_000);
