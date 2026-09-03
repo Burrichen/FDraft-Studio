@@ -7,9 +7,33 @@
  * style from its own content rather than assuming the host OS's.
  */
 
+/**
+ * The running host's own separator, used only as a fallback when a path
+ * segment carries no separator hint of its own (e.g. a bare relative
+ * fragment like `"theme-projects"`) — a real bug found via Prompt 15's
+ * first actual Windows CI run: that fallback used to be hardcoded to `/`
+ * unconditionally, so joining plain segments on Windows silently produced
+ * POSIX-style paths instead of native ones. `process` (real Node, both in
+ * Vitest and in the Windows/macOS/Linux release-workflow runners) is
+ * checked first since it's exact; `navigator` (a real webview's own OS,
+ * accurate in production Tauri — unlike jsdom's test double, which is why
+ * `process` is checked first) is the production fallback.
+ */
+function hostSeparator(): "\\" | "/" {
+  if (typeof process !== "undefined" && typeof process.platform === "string") {
+    return process.platform === "win32" ? "\\" : "/";
+  }
+  if (typeof navigator !== "undefined" && /Windows/i.test(navigator.userAgent ?? "")) {
+    return "\\";
+  }
+  return "/";
+}
+
 function detectSeparator(path: string): "\\" | "/" {
-  // A drive letter or any backslash implies Windows-style; otherwise POSIX.
-  return /^[a-zA-Z]:/.test(path) || path.includes("\\") ? "\\" : "/";
+  // A drive letter or any backslash unambiguously implies Windows-style;
+  // otherwise fall back to whatever the running host actually uses, not a
+  // hardcoded assumption.
+  return /^[a-zA-Z]:/.test(path) || path.includes("\\") ? "\\" : hostSeparator();
 }
 
 /** Splits off a leading drive letter ("C:\") / UNC root ("\\\\") / POSIX root ("/"), returning it plus the remainder. */
