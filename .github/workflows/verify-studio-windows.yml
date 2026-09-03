@@ -182,7 +182,11 @@ jobs:
           if ($entry) {
             Check "registry DisplayVersion matches app version ($appVersion)" ($entry.DisplayVersion -eq $appVersion)
             Check "registry Publisher identifies Studio, not FDraft" ($entry.Publisher -eq "FDraft Studio")
-            $installLocation = $entry.InstallLocation
+            # NSIS's own InstallLocation registry value can come back wrapped in
+            # literal double quotes (unlike a bare path) — Join-Path misparses a
+            # leading `"` as an attempted drive designator ("Cannot find drive
+            # '\"C'") rather than a quote character, so strip it first.
+            $installLocation = if ($entry.InstallLocation) { $entry.InstallLocation.Trim('"') } else { $null }
             Check "InstallLocation reported in registry" (![string]::IsNullOrWhiteSpace($installLocation))
             if ($installLocation) {
               $exePath = Join-Path $installLocation "fdraft-studio.exe"
@@ -208,9 +212,18 @@ jobs:
 
           # Studio's own, separate app-data namespace (identifier
           # com.fdraftstudio.app) — never FDraft's own com.burrichen.fdraft.
+          # A passive launch with no real interaction (this smoke check never
+          # drives the UI — no WebDriver harness exists for that yet) may
+          # never actually write anything here at all: nothing on the Rust
+          # side creates it eagerly, and the frontend only does on a real
+          # user action (e.g. dismissing the first-run tutorial). So this is
+          # recorded, not asserted, before uninstall — the real, assertable
+          # requirement is that uninstall never deletes it if it DOES exist,
+          # checked after uninstall below.
           $studioAppData = "$env:APPDATA\com.fdraftstudio.app"
           Start-Sleep -Seconds 2
-          Check "Studio app-data directory uses its own identifier namespace, distinct from FDraft's" (Test-Path $studioAppData)
+          $appDataExistedBeforeUninstall = Test-Path $studioAppData
+          Write-Host "Studio app-data directory ($studioAppData) present before uninstall: $appDataExistedBeforeUninstall"
 
           # --- Silent uninstall ---
           if ($entry -and $entry.UninstallString) {
@@ -236,8 +249,10 @@ jobs:
           # @tauri-apps/cli (2.11.4) NsisConfig schema has no delete-app-data
           # option at all (confirmed by reading its own config.schema.json
           # directly — not assumed from docs), so nothing could enable this even
-          # by mistake; confirm it empirically for this exact build too.
-          Check "app-data directory survives uninstall" (Test-Path $studioAppData)
+          # by mistake. Only assert survival if it was actually there to begin
+          # with — never having been created isn't itself a failure here (see
+          # the comment above), but losing an existing one to uninstall would be.
+          Check "app-data directory survives uninstall (if it existed)" ((-not $appDataExistedBeforeUninstall) -or (Test-Path $studioAppData))
 
           $results | ConvertTo-Json | Out-File -FilePath "dist-release/install-verification.json" -Encoding utf8
           Get-Content "dist-release/install-verification.json"
